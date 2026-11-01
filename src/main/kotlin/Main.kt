@@ -33,7 +33,11 @@ import androidx.compose.ui.window.rememberWindowState
 import androidx.navigationevent.NavigationEventHandler
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
+import org.jetbrains.compose.resources.painterResource as composePainterResource
+
 import com.kayoi.pixelplayerdesktop.di.appModules
+import com.kayoi.pixelplayerdesktop.generated.resources.Res
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_tray
 import com.kayoi.pixelplayerdesktop.presentation.components.InputFocusTracker
 import com.kayoi.pixelplayerdesktop.presentation.components.LocalInputFocusTracker
 import com.kayoi.pixelplayerdesktop.presentation.components.LocalWindowMinimized
@@ -303,7 +307,7 @@ fun main(args: Array<String> = emptyArray()) {
 
     if (closeToTray) {
         Tray(
-            icon = painterResource("icons/icon.png"),
+            icon = composePainterResource(Res.drawable.ic_tray),
             tooltip = "PixelPlayer",
             onAction = {
                 isWindowVisible = true
@@ -508,14 +512,16 @@ fun main(args: Array<String> = emptyArray()) {
             }
 
             fun updateMaximizedBounds() {
+                if (!isWindows) return
                 window.maximizedBounds = availableScreenBounds() ?: return
             }
 
             updateMaximizedBounds()
 
             // Restoring from maximized should not shrink back to the previous floating
-            // height; stretch the window to the full available height of its monitor.
+            // height on Windows; stretch the window to the full available height of its monitor.
             val windowStateListener = WindowStateListener { event ->
+                if (!isWindows) return@WindowStateListener
                 val wasMaximized = (event.oldState and Frame.MAXIMIZED_BOTH) != 0
                 val isMaximized = (event.newState and Frame.MAXIMIZED_BOTH) != 0
                 if (wasMaximized && !isMaximized) {
@@ -526,7 +532,10 @@ fun main(args: Array<String> = emptyArray()) {
                         val available = availableScreenBounds() ?: return@invokeLater
                         val current = window.bounds
                         val width = current.width.coerceAtMost(available.width)
-                        val x = current.x.coerceIn(available.x, available.x + available.width - width)
+                        val minVisibleMargin = 120
+                        val minX = available.x - width + minVisibleMargin
+                        val maxX = available.x + available.width - minVisibleMargin
+                        val x = current.x.coerceIn(minX, maxX.coerceAtLeast(minX))
                         val target = Rectangle(x, available.y, width, available.height)
                         if (window.bounds != target) {
                             window.bounds = target

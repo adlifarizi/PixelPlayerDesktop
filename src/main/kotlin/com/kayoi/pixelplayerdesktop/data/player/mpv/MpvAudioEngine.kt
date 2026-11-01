@@ -134,11 +134,11 @@ class MpvAudioEngine(
         api.mpv_set_property_string(handle, "gapless-audio", "yes")
         api.mpv_set_property_string(handle, "audio-client-name", "PixelPlayer")
         api.mpv_set_property_string(handle, "audio-pitch-correction", "yes")
-        api.mpv_set_property_string(handle, "audio-fallback-to-null", "yes")
+        api.mpv_set_property_string(handle, "audio-fallback-to-null", "no")
 
         val aoDriver = when {
             Platform.isWindows() -> "wasapi"
-            Platform.isMac() -> "coreaudio"
+            Platform.isMac() -> "coreaudio,avfoundation"
             else -> "pipewire,pulse,alsa"
         }
         api.mpv_set_property_string(handle, "ao", aoDriver)

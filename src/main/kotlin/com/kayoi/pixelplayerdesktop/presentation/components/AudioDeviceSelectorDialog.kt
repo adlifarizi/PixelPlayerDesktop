@@ -196,6 +196,7 @@ fun AudioDeviceSelectorDialog(
                                         device.name.startsWith("alsa") -> "ALSA Hardware"
                                         device.name.startsWith("wasapi") -> "WASAPI"
                                         device.name.startsWith("coreaudio") -> "CoreAudio"
+                                        device.name.startsWith("avfoundation") -> "AVFoundation"
                                         else -> null
                                     }
                                     val subtitleText = if (driverTag != null) "$driverTag • ${device.name}" else device.name
