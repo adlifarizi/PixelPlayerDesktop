@@ -24,6 +24,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Key Features](#key-features)
 - [Keyboard Shortcuts](#keyboard-shortcuts)
 - [Requirements](#requirements)
@@ -44,6 +45,38 @@
 - **Native Audio Performance**: Low-latency, gapless audio playback powered by `libmpv`.
 - **Dynamic Theming**: Fluid Material 3 interface that adapts dynamically to your album art or system accent color.
 - **Package Identifier**: `com.kayoi.pixelplayerdesktop`
+
+---
+
+## Screenshots
+
+<p align="center">
+  <a href="assets/screenshot1.png">
+    <img src="assets/screenshot1.png" alt="PixelPlayer Desktop - Home View" width="100%"/>
+  </a>
+  <br/>
+  <em>Home view with personalized mixes, quick access navigation, and recommendations</em>
+</p>
+
+<br/>
+
+<p align="center">
+  <a href="assets/screenshot2.png">
+    <img src="assets/screenshot2.png" alt="PixelPlayer Desktop - Now Playing & Synced Lyrics" width="100%"/>
+  </a>
+  <br/>
+  <em>Now Playing view featuring dynamic Material 3 color extraction, waveform seeker, and synchronized lyrics</em>
+</p>
+
+<br/>
+
+<p align="center">
+  <a href="assets/screenshot3.png">
+    <img src="assets/screenshot3.png" alt="PixelPlayer Desktop - Library & Queue" width="100%"/>
+  </a>
+  <br/>
+  <em>Library view with track browser, persistent bottom player bar, and responsive side queue panel</em>
+</p>
 
 ---
 
