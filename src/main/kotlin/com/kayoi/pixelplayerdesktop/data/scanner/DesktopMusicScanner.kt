@@ -1,27 +1,5 @@
 package com.kayoi.pixelplayerdesktop.data.scanner
 
-import com.kayoi.pixelplayerdesktop.data.database.LyricsDao
-import com.kayoi.pixelplayerdesktop.data.database.MusicDao
-import com.kayoi.pixelplayerdesktop.data.model.ArtistRef
-import com.kayoi.pixelplayerdesktop.data.model.generateArtistId
-import com.kayoi.pixelplayerdesktop.data.model.Song
-import com.kayoi.pixelplayerdesktop.utils.DEFAULT_ARTIST_DELIMITERS
-import com.kayoi.pixelplayerdesktop.utils.AudioFileReaderUtils
-import com.kayoi.pixelplayerdesktop.utils.DEFAULT_WORD_DELIMITERS
-import com.kayoi.pixelplayerdesktop.utils.DesktopPathProvider
-import com.kayoi.pixelplayerdesktop.utils.LrcParser
-import com.kayoi.pixelplayerdesktop.utils.collectArtistNames
-import com.kayoi.pixelplayerdesktop.utils.isDirectoryOrParentExcluded
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.withContext
-import org.gagravarr.opus.OpusFile
-import org.gagravarr.opus.OpusTags
-import org.jaudiotagger.audio.AudioFileIO
-import org.jaudiotagger.tag.FieldKey
 import java.io.File
 import java.io.IOException
 import java.io.RandomAccessFile
@@ -35,6 +13,30 @@ import java.security.MessageDigest
 import java.util.Base64
 import java.util.UUID
 
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
+import org.gagravarr.opus.OpusFile
+import org.gagravarr.opus.OpusTags
+import org.jaudiotagger.tag.FieldKey
+
+import com.kayoi.pixelplayerdesktop.data.database.LyricsDao
+import com.kayoi.pixelplayerdesktop.data.database.MusicDao
+import com.kayoi.pixelplayerdesktop.data.model.ArtistRef
+import com.kayoi.pixelplayerdesktop.data.model.Song
+import com.kayoi.pixelplayerdesktop.data.model.generateArtistId
+import com.kayoi.pixelplayerdesktop.utils.AdtsParser
+import com.kayoi.pixelplayerdesktop.utils.AudioFileReaderUtils
+import com.kayoi.pixelplayerdesktop.utils.DEFAULT_ARTIST_DELIMITERS
+import com.kayoi.pixelplayerdesktop.utils.DEFAULT_WORD_DELIMITERS
+import com.kayoi.pixelplayerdesktop.utils.DesktopPathProvider
+import com.kayoi.pixelplayerdesktop.utils.LrcParser
+import com.kayoi.pixelplayerdesktop.utils.collectArtistNames
+import com.kayoi.pixelplayerdesktop.utils.isDirectoryOrParentExcluded
+
 sealed interface ScanProgress {
     data object Idle : ScanProgress
     data class Scanning(val currentFile: String, val scannedCount: Int, val totalDiscovered: Int) : ScanProgress
@@ -42,6 +44,11 @@ sealed interface ScanProgress {
     data class Error(val message: String) : ScanProgress
 }
 private const val PROGRESS_UPDATE_INTERVAL_MS = 100L
+private val TRACK_NUMBER_PREFIX_REGEX = Regex("""^\d{1,3}[\s.\-_]+\s*""")
+private val QUALITY_SUFFIX_REGEX = Regex(
+    """\s*[\(\[]\s*(?:\d+\s*k(?:bps)?|official(?:\s+(?:audio|video|music\s+video|lyric\s+video))?|lyrics?)\s*[\)\]]""",
+    RegexOption.IGNORE_CASE
+)
 
 /**
  * High-performance audio library scanner for local desktop storage.
@@ -164,7 +171,7 @@ class DesktopMusicScanner(
                     val lastModified = file.lastModified()
                     val existing = existingSongs[path]
 
-                    if (!forceRescan && existing != null && existing.dateModified == lastModified) {
+                    if (!forceRescan && existing != null && existing.dateModified == lastModified && !(existing.duration == 0L && file.extension.equals("aac", ignoreCase = true))) {
                         continue
                     }
 
@@ -216,10 +223,10 @@ class DesktopMusicScanner(
         extractArtistFromTitle: Boolean = true
     ): Song? {
         val ext = file.extension.lowercase()
-        return if (ext == "opus") {
-            extractOpusMetadata(file, existingId, artistDelimiters, wordDelimiters, extractArtistFromTitle)
-        } else {
-            extractGeneralMetadata(file, existingId, artistDelimiters, wordDelimiters, extractArtistFromTitle)
+        return when (ext) {
+            "opus" -> extractOpusMetadata(file, existingId, artistDelimiters, wordDelimiters, extractArtistFromTitle)
+            "aac" -> extractAacMetadata(file, existingId, artistDelimiters, wordDelimiters, extractArtistFromTitle)
+            else -> extractGeneralMetadata(file, existingId, artistDelimiters, wordDelimiters, extractArtistFromTitle)
         }
     }
 
@@ -237,12 +244,16 @@ class DesktopMusicScanner(
                 val tags = opusFile.tags
                 val info = opusFile.info
 
+                val (inferredTitle, inferredArtist) = inferTitleAndArtistFromFilename(file.nameWithoutExtension)
+
                 val title = tags?.title?.trim()?.ifBlank { null }
                     ?: getVorbisComment(tags, "title")?.trim()?.ifBlank { null }
+                    ?: inferredTitle
                     ?: file.nameWithoutExtension
 
                 val rawArtist = tags?.artist?.trim()?.ifBlank { null }
                     ?: getVorbisComment(tags, "artist")?.trim()?.ifBlank { null }
+                    ?: inferredArtist
                     ?: "Unknown Artist"
 
                 val parsedArtists = collectArtistNames(
@@ -338,6 +349,120 @@ class DesktopMusicScanner(
         return match?.value?.toIntOrNull() ?: raw.trim().take(4).toIntOrNull()
     }
 
+    private fun extractAacMetadata(
+        file: File,
+        existingId: String?,
+        artistDelimiters: List<String>,
+        wordDelimiters: List<String>,
+        extractArtistFromTitle: Boolean
+    ): Song? {
+        val result = AdtsParser.parse(file) ?: return extractGeneralMetadata(
+            file,
+            existingId,
+            artistDelimiters,
+            wordDelimiters,
+            extractArtistFromTitle
+        )
+
+        val tag = result.tag
+        val audioInfo = result.audioInfo
+
+        val (inferredTitle, inferredArtist) = inferTitleAndArtistFromFilename(file.nameWithoutExtension)
+
+        val title = tag?.getFirst(FieldKey.TITLE)?.trim()?.ifBlank { null }
+            ?: inferredTitle
+            ?: file.nameWithoutExtension
+
+        val rawArtist = tag?.getFirst(FieldKey.ARTIST)?.trim()?.ifBlank { null }
+            ?: inferredArtist
+            ?: "Unknown Artist"
+
+        val parsedArtists = collectArtistNames(
+            rawArtistName = rawArtist,
+            title = title,
+            artistDelimiters = artistDelimiters,
+            wordDelimiters = wordDelimiters,
+            extractFromTitle = extractArtistFromTitle
+        )
+        val artist = parsedArtists.firstOrNull()?.ifBlank { null } ?: rawArtist
+
+        val artistRefs = parsedArtists.mapIndexed { index, name ->
+            ArtistRef(
+                id = generateArtistId(name),
+                name = name.trim(),
+                isPrimary = (index == 0)
+            )
+        }
+
+        val album = tag?.getFirst(FieldKey.ALBUM)?.trim()?.ifBlank { null } ?: "Unknown Album"
+        val albumArtist = tag?.getFirst(FieldKey.ALBUM_ARTIST)?.trim()?.ifBlank { null }
+        val genre = tag?.getFirst(FieldKey.GENRE)?.trim()?.ifBlank { null }
+        val lyrics = tag?.getFirst(FieldKey.LYRICS)?.trim()?.ifBlank { null }
+
+        val year = parseYear(tag?.getFirst(FieldKey.YEAR))
+            ?: parseYear(tag?.getFirst(FieldKey.ORIGINAL_YEAR))
+            ?: 0
+        val trackNumber = tag?.getFirst(FieldKey.TRACK)?.substringBefore('/')?.trim()?.toIntOrNull() ?: 0
+        val discNumber = tag?.getFirst(FieldKey.DISC_NO)?.substringBefore('/')?.trim()?.toIntOrNull()
+
+        val artworkUri = extractArtworkToCache(tag, file)
+
+        val songId = existingId ?: UUID.nameUUIDFromBytes(file.absolutePath.toByteArray()).toString()
+        val artistId = generateArtistId(artist)
+        val albumId = "$album-$artist".hashCode().toLong()
+
+        return Song(
+            id = songId,
+            title = title,
+            artist = artist,
+            artistId = artistId,
+            album = album,
+            albumId = albumId,
+            albumArtist = albumArtist,
+            path = file.absolutePath,
+            contentUriString = file.toURI().toString(),
+            albumArtUriString = artworkUri,
+            duration = audioInfo.durationMs,
+            genre = genre,
+            lyrics = lyrics,
+            trackNumber = trackNumber,
+            discNumber = discNumber,
+            year = year,
+            dateAdded = System.currentTimeMillis(),
+            dateModified = file.lastModified(),
+            mimeType = "audio/aac",
+            bitrate = audioInfo.bitrate,
+            sampleRate = audioInfo.sampleRate,
+            artists = artistRefs
+        )
+    }
+
+    private fun inferTitleAndArtistFromFilename(filename: String): Pair<String?, String?> {
+        val withoutQuality = filename.replace(QUALITY_SUFFIX_REGEX, "").trim()
+        val cleaned = withoutQuality.replace(TRACK_NUMBER_PREFIX_REGEX, "").trim().ifBlank { withoutQuality }
+
+        if (!cleaned.contains(" - ")) {
+            return Pair(cleaned.ifBlank { null }, null)
+        }
+
+        val parts = cleaned.split(" - ", limit = 2)
+        if (parts.size != 2) {
+            return Pair(cleaned.ifBlank { null }, null)
+        }
+
+        val part0 = parts[0].trim()
+        val part1 = parts[1].trim()
+
+        val part0HasTitleHint = part0.contains("(") || part0.contains("[")
+        val part1HasTitleHint = part1.contains("(") || part1.contains("[")
+
+        return if (part0HasTitleHint && !part1HasTitleHint) {
+            Pair(part0.ifBlank { null }, part1.ifBlank { null })
+        } else {
+            Pair(part1.ifBlank { null }, part0.ifBlank { null })
+        }
+    }
+
     private fun extractGeneralMetadata(
         file: File,
         existingId: String?,
@@ -350,8 +475,14 @@ class DesktopMusicScanner(
             val tag = audioFile.tag
             val header = audioFile.audioHeader
 
-            val title = tag?.getFirst(FieldKey.TITLE)?.trim()?.ifBlank { null } ?: file.nameWithoutExtension
-            val rawArtist = tag?.getFirst(FieldKey.ARTIST)?.trim()?.ifBlank { null } ?: "Unknown Artist"
+            val (inferredTitle, inferredArtist) = inferTitleAndArtistFromFilename(file.nameWithoutExtension)
+
+            val title = tag?.getFirst(FieldKey.TITLE)?.trim()?.ifBlank { null }
+                ?: inferredTitle
+                ?: file.nameWithoutExtension
+            val rawArtist = tag?.getFirst(FieldKey.ARTIST)?.trim()?.ifBlank { null }
+                ?: inferredArtist
+                ?: "Unknown Artist"
 
             val parsedArtists = collectArtistNames(
                 rawArtistName = rawArtist,
@@ -576,11 +707,15 @@ class DesktopMusicScanner(
     private fun fallbackSong(file: File, existingId: String?): Song {
         val songId = existingId ?: UUID.nameUUIDFromBytes(file.absolutePath.toByteArray()).toString()
         val folderArt = findFolderArtworkCached(file.parentFile)
+        val (inferredTitle, inferredArtist) = inferTitleAndArtistFromFilename(file.nameWithoutExtension)
+        val title = inferredTitle ?: file.nameWithoutExtension
+        val artist = inferredArtist ?: "Unknown Artist"
+        val artistId = generateArtistId(artist)
         return Song(
             id = songId,
-            title = file.nameWithoutExtension,
-            artist = "Unknown Artist",
-            artistId = generateArtistId("Unknown Artist"),
+            title = title,
+            artist = artist,
+            artistId = artistId,
             album = "Unknown Album",
             albumId = "Unknown Album".hashCode().toLong(),
             path = file.absolutePath,
