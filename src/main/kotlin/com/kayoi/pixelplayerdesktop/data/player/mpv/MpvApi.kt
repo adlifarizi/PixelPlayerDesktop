@@ -111,7 +111,7 @@ interface MpvApi : Library {
                 val isWin = Platform.isWindows()
                 val libName = if (isWin) "msvcrt" else "c"
                 val libc = Native.load(libName, LibC::class.java)
-                val lcNumeric = if (isWin) 4 else 1
+                val lcNumeric = if (isWin || Platform.isMac()) 4 else 1
                 libc.setlocale(lcNumeric, "C")
             }
         }
