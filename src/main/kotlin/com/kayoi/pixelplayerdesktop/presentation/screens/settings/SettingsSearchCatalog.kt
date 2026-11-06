@@ -12,6 +12,7 @@ import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_brush
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_dark_mode
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_delete
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_delete_forever
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_fullscreen
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_graphic_eq
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_info
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_layers
@@ -132,6 +133,13 @@ object SettingsSearchCatalog {
             section = SettingsSection.APPEARANCE,
             keywords = listOf("dark", "light", "theme", "mode", "color", "night"),
             icon = Res.drawable.ic_rounded_dark_mode
+        ),
+        SettingSearchItem(
+            title = "Display Scale",
+            description = "Adjust application zoom and UI scaling level",
+            section = SettingsSection.APPEARANCE,
+            keywords = listOf("scale", "zoom", "dpi", "size", "display", "resolution"),
+            icon = Res.drawable.ic_rounded_fullscreen
         ),
         SettingSearchItem(
             title = "Dynamic Color",

@@ -317,6 +317,7 @@ class PlayerViewModel(
     ) = libraryStateHolder.togglePin(id, title, type, targetKey, isPinned, onResult)
 
     val isDarkMode = themeStateHolder.isDarkMode
+    val uiScale = themeStateHolder.uiScale
     val isDynamicColorEnabled = themeStateHolder.isDynamicColorEnabled
     val albumArtPaletteStyle = themeStateHolder.albumArtPaletteStyle
     val albumArtColorAccuracy = themeStateHolder.albumArtColorAccuracy
@@ -324,6 +325,9 @@ class PlayerViewModel(
     val navBarCompactMode = themeStateHolder.navBarCompactMode
     val defaultTab = themeStateHolder.defaultTab
     fun toggleDarkMode() = themeStateHolder.toggleDarkMode()
+    fun setUiScale(scale: Float) = themeStateHolder.setUiScale(scale)
+    fun adjustUiScale(delta: Float) = themeStateHolder.adjustUiScale(delta)
+    fun resetUiScale() = themeStateHolder.resetUiScale()
     fun toggleDynamicColor() = themeStateHolder.toggleDynamicColor()
     fun setAlbumArtPaletteStyle(style: AlbumArtPaletteStyle) = themeStateHolder.setAlbumArtPaletteStyle(style)
     fun setAlbumArtColorAccuracy(accuracy: Int) = themeStateHolder.setAlbumArtColorAccuracy(accuracy)

@@ -23,7 +23,9 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
@@ -147,7 +149,30 @@ private fun loadMultiResolutionIcoImages(resourcePath: String): List<BufferedIma
     }
 }
 
+private fun isIgnorableSkikoDisposalException(throwable: Throwable?): Boolean {
+    var current = throwable
+    while (current != null) {
+        if (current is IllegalArgumentException && current.message?.contains("RootNodeOwner is already disposed") == true) {
+            return true
+        }
+        for (suppressed in current.suppressed) {
+            if (isIgnorableSkikoDisposalException(suppressed)) {
+                return true
+            }
+        }
+        current = current.cause
+    }
+    return false
+}
+
 fun main(args: Array<String> = emptyArray()) {
+    val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+    Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+        if (isIgnorableSkikoDisposalException(throwable)) {
+            return@setDefaultUncaughtExceptionHandler
+        }
+        previousHandler?.uncaughtException(thread, throwable)
+    }
     val osName = System.getProperty("os.name", "").lowercase()
     if (osName.contains("mac") || osName.contains("darwin")) {
         System.setProperty("apple.awt.application.appearance", "system")
@@ -178,6 +203,7 @@ fun main(args: Array<String> = emptyArray()) {
     val audioEngine = remember { koin.get<AudioEngine>() }
     val initialSetupDone by playerViewModel.initialSetupDone.collectAsState()
     val isDarkTheme by playerViewModel.isDarkMode.collectAsState()
+    val uiScale by playerViewModel.uiScale.collectAsState()
     val currentSong by playerViewModel.currentSong.collectAsState()
     val queue by playerViewModel.queue.collectAsState()
     val playerInfo by playerViewModel.playerInfo.collectAsState()
@@ -451,11 +477,26 @@ fun main(args: Array<String> = emptyArray()) {
                         playerViewModel.toggleShortcutsDialog()
                         true
                     }
+                    isModifier && (keyEvent.key == Key.Equals || keyEvent.key == Key.Plus || keyEvent.key == Key.NumPadAdd) -> {
+                        playerViewModel.adjustUiScale(0.10f)
+                        true
+                    }
+                    isModifier && (keyEvent.key == Key.Minus || keyEvent.key == Key.NumPadSubtract) -> {
+                        playerViewModel.adjustUiScale(-0.10f)
+                        true
+                    }
+                    isModifier && (keyEvent.key == Key.Zero || keyEvent.key == Key.NumPad0) -> {
+                        playerViewModel.resetUiScale()
+                        true
+                    }
                     else -> false
                 }
             } else if (keyEvent.type == KeyEventType.KeyUp) {
                 when {
                     (isModifier && keyEvent.key == Key.Slash) || keyEvent.key == Key.F1 -> true
+                    isModifier && (keyEvent.key == Key.Equals || keyEvent.key == Key.Plus || keyEvent.key == Key.NumPadAdd ||
+                        keyEvent.key == Key.Minus || keyEvent.key == Key.NumPadSubtract ||
+                        keyEvent.key == Key.Zero || keyEvent.key == Key.NumPad0) -> true
                     keyEvent.isAltPressed && (keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionRight) -> true
                     isModifier && (keyEvent.key == Key.K || keyEvent.key == Key.S || keyEvent.key == Key.R || keyEvent.key == Key.Q) -> true
                     isModifier && !isInputActive && (keyEvent.key == Key.DirectionRight || keyEvent.key == Key.DirectionLeft || keyEvent.key == Key.DirectionUp || keyEvent.key == Key.DirectionDown) -> true
@@ -585,7 +626,16 @@ fun main(args: Array<String> = emptyArray()) {
             }
         }
 
+        val baseDensity = LocalDensity.current
+        val scaledDensity = remember(baseDensity, uiScale) {
+            Density(
+                density = baseDensity.density * uiScale,
+                fontScale = baseDensity.fontScale
+            )
+        }
+
         CompositionLocalProvider(
+            LocalDensity provides scaledDensity,
             LocalWindowMinimized provides windowState.isMinimized,
             LocalInputFocusTracker provides inputFocusTracker,
             LocalBackDispatcher provides backDispatcher

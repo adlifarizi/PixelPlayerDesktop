@@ -139,6 +139,21 @@ val defaultShortcutCategories = listOf(
                 title = "Keyboard Shortcuts Cheatsheet",
                 description = "Show the quick reference dialog anywhere",
                 keyCombos = listOf(listOf(modKey, "/"), listOf("F1"))
+            ),
+            ShortcutItem(
+                title = "Zoom In",
+                description = "Increase application interface scale",
+                keyCombos = listOf(listOf(modKey, "+"))
+            ),
+            ShortcutItem(
+                title = "Zoom Out",
+                description = "Decrease application interface scale",
+                keyCombos = listOf(listOf(modKey, "-"))
+            ),
+            ShortcutItem(
+                title = "Reset Zoom",
+                description = "Reset interface scale to 100%",
+                keyCombos = listOf(listOf(modKey, "0"))
             )
         )
     )
@@ -224,10 +239,13 @@ fun ShortcutRow(
                             text = "or",
                             style = MaterialTheme.typography.labelSmall,
                             color = colors.onSurfaceVariant,
-                            modifier = Modifier.padding(horizontal = 2.dp)
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .padding(horizontal = 2.dp)
                         )
                     }
                     Row(
+                        modifier = Modifier.align(Alignment.CenterVertically),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

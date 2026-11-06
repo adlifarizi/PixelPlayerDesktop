@@ -636,6 +636,29 @@ fun SettingsCategoryDetail(
                 }
 
                 item {
+                    val uiScale by viewModel.uiScale.collectAsState()
+                    var uiScaleDraft by remember(uiScale) { mutableStateOf(uiScale) }
+
+                    SettingsSubsection(title = "INTERFACE SCALE") {
+                        ExpressiveSliderSettingsRow(
+                            title = "Display Scale",
+                            subtitle = "Adjust UI zoom level (Ctrl/Cmd + Plus / Minus to zoom, Ctrl/Cmd + 0 to reset)",
+                            value = uiScaleDraft,
+                            valueRange = 0.70f..2.00f,
+                            steps = 12,
+                            onValueChange = { uiScaleDraft = ((it * 10).roundToInt() / 10f) },
+                            onValueChangeFinished = {
+                                if (uiScaleDraft != uiScale) {
+                                    viewModel.setUiScale(uiScaleDraft)
+                                }
+                            },
+                            shape = getGroupShape(0, 1),
+                            valueText = { "${(it * 100).roundToInt()}%" }
+                        )
+                    }
+                }
+
+                item {
                     val currentPaletteStyle by viewModel.albumArtPaletteStyle.collectAsState()
                     val showPlayerFileInfo by viewModel.showPlayerFileInfo.collectAsState()
 
