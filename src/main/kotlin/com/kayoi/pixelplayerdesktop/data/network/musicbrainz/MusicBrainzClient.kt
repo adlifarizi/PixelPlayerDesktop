@@ -1,6 +1,10 @@
 package com.kayoi.pixelplayerdesktop.data.network.musicbrainz
 
-import com.kayoi.pixelplayerdesktop.BuildConfig
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URLEncoder
+
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -12,9 +16,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.net.HttpURLConnection
-import java.net.URI
-import java.net.URLEncoder
+
+import com.kayoi.pixelplayerdesktop.BuildConfig
 
 data class OnlineTrackMetadata(
     val title: String,
@@ -207,8 +210,8 @@ class MusicBrainzClient(
         }
     }
 
-    suspend fun fetchCoverArt(releaseId: String): ByteArray? = withContext(ioDispatcher) {
-        if (releaseId.isBlank()) return@withContext null
+    suspend fun fetchCoverArt(releaseId: String): Result<ByteArray?> = withContext(ioDispatcher) {
+        if (releaseId.isBlank()) return@withContext Result.success(null)
         var currentUrl = "https://coverartarchive.org/release/$releaseId/front-500"
         var redirects = 0
 
@@ -222,21 +225,28 @@ class MusicBrainzClient(
 
                 val status = conn.responseCode
                 if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
-                    val location = conn.getHeaderField("Location") ?: break
+                    val location = conn.getHeaderField("Location")
+                        ?: return@withContext Result.failure(IOException("Missing redirect location"))
                     currentUrl = location
                     redirects++
                     continue
                 }
 
                 if (status == HttpURLConnection.HTTP_OK) {
-                    return@withContext conn.inputStream.use { it.readBytes() }
+                    val bytes = conn.inputStream.use { it.readBytes() }
+                    return@withContext Result.success(bytes)
                 }
-                break
-            } catch (_: Exception) {
-                break
+
+                if (status == HttpURLConnection.HTTP_NOT_FOUND) {
+                    return@withContext Result.success(null)
+                }
+
+                return@withContext Result.failure(IOException("HTTP error $status"))
+            } catch (e: Exception) {
+                return@withContext Result.failure(e)
             }
         }
-        null
+        Result.failure(IOException("Too many redirects"))
     }
 
     private fun executeHttpGet(urlString: String): String? {

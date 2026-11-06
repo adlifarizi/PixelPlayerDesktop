@@ -1,14 +1,5 @@
 package com.kayoi.pixelplayerdesktop.presentation.components
 
-import com.kayoi.pixelplayerdesktop.generated.resources.Res
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_album
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_check
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_check_circle
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_close
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_cloud
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_cloud_download
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
-import org.jetbrains.compose.resources.painterResource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -29,9 +20,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,13 +48,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kayoi.pixelplayerdesktop.data.network.musicbrainz.OnlineReleaseMetadata
-import com.kayoi.pixelplayerdesktop.presentation.viewmodel.PlayerViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.skia.Image as SkiaImage
+
+import com.kayoi.pixelplayerdesktop.data.network.musicbrainz.OnlineReleaseMetadata
+import com.kayoi.pixelplayerdesktop.generated.resources.Res
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_album
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_check_circle
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_close
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_cloud_download
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_refresh
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
+import com.kayoi.pixelplayerdesktop.presentation.viewmodel.PlayerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,27 +85,50 @@ fun SearchOnlineReleaseDialog(
     var results by remember { mutableStateOf<List<OnlineReleaseMetadata>>(emptyList()) }
     var selectedRelease by remember { mutableStateOf<OnlineReleaseMetadata?>(null) }
     var isLoadingCoverArt by remember { mutableStateOf(false) }
+    var isCoverArtFailed by remember { mutableStateOf(false) }
     var coverArtBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var coverArtJob by remember { mutableStateOf<Job?>(null) }
     var hasSearched by remember { mutableStateOf(false) }
+
+    fun loadCoverArt(releaseId: String?) {
+        coverArtJob?.cancel()
+        if (releaseId.isNullOrBlank()) {
+            coverArtBytes = null
+            isCoverArtFailed = false
+            return
+        }
+        coverArtJob = coroutineScope.launch {
+            isLoadingCoverArt = true
+            isCoverArtFailed = false
+            val result = viewModel.fetchOnlineCoverArt(releaseId)
+            result.fold(
+                onSuccess = { bytes ->
+                    coverArtBytes = bytes
+                    isCoverArtFailed = false
+                },
+                onFailure = {
+                    coverArtBytes = null
+                    isCoverArtFailed = true
+                }
+            )
+            isLoadingCoverArt = false
+        }
+    }
 
     fun performSearch(query: String) {
         if (query.isBlank()) return
         isSearching = true
         selectedRelease = null
         coverArtBytes = null
+        isCoverArtFailed = false
         hasSearched = true
         coroutineScope.launch {
             val list = viewModel.searchOnlineReleases(query)
             results = list
-            selectedRelease = list.firstOrNull()
-            isSearching = false
-
             val first = list.firstOrNull()
-            if (first != null) {
-                isLoadingCoverArt = true
-                coverArtBytes = viewModel.fetchOnlineCoverArt(first.id)
-                isLoadingCoverArt = false
-            }
+            selectedRelease = first
+            isSearching = false
+            loadCoverArt(first?.id)
         }
     }
 
@@ -209,9 +234,10 @@ fun SearchOnlineReleaseDialog(
                                     ) {
                                         CircularProgressIndicator(modifier = Modifier.size(28.dp))
                                         Text(
-                                            "Searching MusicBrainz...",
+                                            text = "Searching MusicBrainz...",
                                             style = MaterialTheme.typography.labelMedium,
-                                            color = colors.onSurfaceVariant
+                                            color = colors.onSurfaceVariant,
+                                            textAlign = TextAlign.Center
                                         )
                                     }
                                 }
@@ -219,9 +245,10 @@ fun SearchOnlineReleaseDialog(
                             results.isEmpty() && hasSearched -> {
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Text(
-                                        "No album releases found. Try adjusting query.",
+                                        text = "No album releases found. Try adjusting query.",
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = colors.onSurfaceVariant
+                                        color = colors.onSurfaceVariant,
+                                        textAlign = TextAlign.Center
                                     )
                                 }
                             }
@@ -240,11 +267,7 @@ fun SearchOnlineReleaseDialog(
                                                 .fillMaxWidth()
                                                 .clickable {
                                                     selectedRelease = item
-                                                    coroutineScope.launch {
-                                                        isLoadingCoverArt = true
-                                                        coverArtBytes = viewModel.fetchOnlineCoverArt(item.id)
-                                                        isLoadingCoverArt = false
-                                                    }
+                                                    loadCoverArt(item.id)
                                                 }
                                         ) {
                                             Row(
@@ -325,9 +348,10 @@ fun SearchOnlineReleaseDialog(
                         if (release == null) {
                             Box(modifier = Modifier.fillMaxSize().padding(14.dp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "Select an album release to preview",
+                                    text = "Select an album release to preview",
                                     style = MaterialTheme.typography.labelMedium,
-                                    color = colors.onSurfaceVariant
+                                    color = colors.onSurfaceVariant,
+                                    textAlign = TextAlign.Center
                                 )
                             }
                         } else {
@@ -346,6 +370,36 @@ fun SearchOnlineReleaseDialog(
                                 ) {
                                     when {
                                         isLoadingCoverArt -> CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        isCoverArtFailed -> {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center,
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clickable { loadCoverArt(release.id) }
+                                                    .padding(8.dp)
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(Res.drawable.ic_rounded_refresh),
+                                                    contentDescription = "Retry fetching cover art",
+                                                    tint = colors.error,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = "Failed to load",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = colors.error,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                                Text(
+                                                    text = "Click to retry",
+                                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                                    color = colors.onSurfaceVariant,
+                                                    textAlign = TextAlign.Center
+                                                )
+                                            }
+                                        }
                                         coverArtBytes != null -> {
                                             val bmp = remember(coverArtBytes) {
                                                 runCatching { SkiaImage.makeFromEncoded(coverArtBytes!!).toComposeImageBitmap() }.getOrNull()
@@ -358,10 +412,16 @@ fun SearchOnlineReleaseDialog(
                                                     contentScale = ContentScale.Crop
                                                 )
                                             } else {
-                                                Icon(painterResource(Res.drawable.ic_rounded_album), contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(42.dp))
+                                                Icon(
+                                                    painter = painterResource(Res.drawable.ic_rounded_album),
+                                                    contentDescription = null,
+                                                    tint = colors.onSurfaceVariant,
+                                                    modifier = Modifier.size(42.dp)
+                                                )
                                             }
                                         }
-                                        else -> Icon(painterResource(Res.drawable.ic_rounded_album),
+                                        else -> Icon(
+                                            painter = painterResource(Res.drawable.ic_rounded_album),
                                             contentDescription = null,
                                             tint = colors.onSurfaceVariant.copy(alpha = 0.5f),
                                             modifier = Modifier.size(42.dp)

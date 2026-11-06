@@ -457,7 +457,7 @@ class MusicRepositoryImpl(
         return client.searchReleases(query)
     }
 
-    override suspend fun fetchOnlineCoverArt(releaseId: String): ByteArray? {
+    override suspend fun fetchOnlineCoverArt(releaseId: String): Result<ByteArray?> {
         val client = musicBrainzClient ?: MusicBrainzClient(ioDispatcher)
         return client.fetchCoverArt(releaseId)
     }

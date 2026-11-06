@@ -108,5 +108,5 @@ interface MusicRepository {
     suspend fun searchOnlineMetadata(title: String, artist: String): List<OnlineTrackMetadata>
     suspend fun searchOnlineMetadataByQuery(query: String): List<OnlineTrackMetadata>
     suspend fun searchOnlineReleases(query: String): List<OnlineReleaseMetadata>
-    suspend fun fetchOnlineCoverArt(releaseId: String): ByteArray?
+    suspend fun fetchOnlineCoverArt(releaseId: String): Result<ByteArray?>
 }

@@ -378,7 +378,7 @@ class PlayerViewModel(
         return libraryStateHolder.searchOnlineReleases(query)
     }
 
-    suspend fun fetchOnlineCoverArt(releaseId: String): ByteArray? {
+    suspend fun fetchOnlineCoverArt(releaseId: String): Result<ByteArray?> {
         return libraryStateHolder.fetchOnlineCoverArt(releaseId)
     }
 

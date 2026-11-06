@@ -682,7 +682,7 @@ class LibraryStateHolder(
         return musicRepository.searchOnlineReleases(query)
     }
 
-    suspend fun fetchOnlineCoverArt(releaseId: String): ByteArray? {
+    suspend fun fetchOnlineCoverArt(releaseId: String): Result<ByteArray?> {
         return musicRepository.fetchOnlineCoverArt(releaseId)
     }
 
