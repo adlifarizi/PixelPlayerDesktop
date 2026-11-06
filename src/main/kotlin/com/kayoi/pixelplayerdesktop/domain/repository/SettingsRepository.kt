@@ -18,6 +18,7 @@ interface SettingsRepository {
     suspend fun removeExcludedDirectory(path: String)
     suspend fun setDynamicColoringEnabled(enabled: Boolean)
     suspend fun setDarkMode(isDark: Boolean)
+    suspend fun setUiScale(scale: Float)
     suspend fun setAlbumArtPaletteStyle(style: AlbumArtPaletteStyle)
     suspend fun setAlbumArtColorAccuracy(accuracy: Int)
     suspend fun setVolume(volume: Float)

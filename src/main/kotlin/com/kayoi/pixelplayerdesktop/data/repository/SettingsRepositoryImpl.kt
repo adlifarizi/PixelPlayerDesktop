@@ -1,6 +1,7 @@
 package com.kayoi.pixelplayerdesktop.data.repository
 
 import java.io.File
+import kotlin.math.roundToInt
 
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +94,11 @@ class SettingsRepositoryImpl(
 
     override suspend fun setDarkMode(isDark: Boolean) {
         updateSettings { it.copy(isDarkMode = isDark) }
+    }
+
+    override suspend fun setUiScale(scale: Float) {
+        val clamped = ((scale * 100).roundToInt() / 100f).coerceIn(0.70f, 2.00f)
+        updateSettings { it.copy(uiScale = clamped) }
     }
 
     override suspend fun setAlbumArtPaletteStyle(style: AlbumArtPaletteStyle) {
@@ -425,7 +431,8 @@ class SettingsRepositoryImpl(
         return try {
             if (settingsFile.exists()) {
                 val content = settingsFile.readText(Charsets.UTF_8)
-                json.decodeFromString(UserSettings.serializer(), content)
+                val loaded = json.decodeFromString(UserSettings.serializer(), content)
+                loaded.copy(uiScale = loaded.uiScale.coerceIn(0.70f, 2.00f))
             } else {
                 val defaultSettings = UserSettings(
                     musicDirectories = DesktopPathProvider.defaultMusicDirectories

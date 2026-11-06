@@ -26,11 +26,13 @@ class SettingsRepositoryTest {
         val initial = repository.getSettings()
         assertTrue(initial.isDynamicColorEnabled)
         assertTrue(initial.audioFadeOnPlayPause)
+        assertEquals(1.0f, initial.uiScale)
 
         // Update settings
         repository.setDynamicColoringEnabled(false)
         repository.setAudioFadeOnPlayPause(false)
         repository.setVolume(0.75f)
+        repository.setUiScale(1.25f)
         repository.addMusicDirectory("/test/music")
         repository.setAlbumsListView(true)
         repository.setArtistsListView(true)
@@ -43,6 +45,7 @@ class SettingsRepositoryTest {
         assertEquals(false, updated.isDynamicColorEnabled)
         assertEquals(false, updated.audioFadeOnPlayPause)
         assertEquals(0.75f, updated.volume)
+        assertEquals(1.25f, updated.uiScale)
         assertTrue(updated.musicDirectories.contains("/test/music"))
         assertEquals(true, updated.isAlbumsListView)
         assertEquals(true, updated.isArtistsListView)
@@ -57,12 +60,19 @@ class SettingsRepositoryTest {
         assertEquals(null, resetOffsets["song_123"])
         assertEquals(-300, resetOffsets["song_456"])
 
+        repository.setUiScale(0.50f)
+        assertEquals(0.70f, repository.getSettings().uiScale)
+        repository.setUiScale(2.50f)
+        assertEquals(2.00f, repository.getSettings().uiScale)
+        repository.setUiScale(1.20f)
+
         // Create new repository instance from the same file to verify persistence
         val reloaded = SettingsRepositoryImpl(settingsFile = tempFile)
         val reloadedSettings = reloaded.getSettings()
         assertEquals(false, reloadedSettings.isDynamicColorEnabled)
         assertEquals(false, reloadedSettings.audioFadeOnPlayPause)
         assertEquals(0.75f, reloadedSettings.volume)
+        assertEquals(1.20f, reloadedSettings.uiScale)
         assertTrue(reloadedSettings.musicDirectories.contains("/test/music"))
         assertEquals(true, reloadedSettings.isAlbumsListView)
         assertEquals(true, reloadedSettings.isArtistsListView)

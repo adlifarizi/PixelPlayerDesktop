@@ -1,9 +1,7 @@
 package com.kayoi.pixelplayerdesktop.presentation.viewmodel
 
-import com.kayoi.pixelplayerdesktop.data.preferences.AlbumArtColorAccuracy
-import com.kayoi.pixelplayerdesktop.data.preferences.AlbumArtPaletteStyle
-import com.kayoi.pixelplayerdesktop.domain.repository.SettingsRepository
-import com.kayoi.pixelplayerdesktop.ui.theme.dynamic.DynamicColorProcessor
+import kotlin.math.roundToInt
+
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -12,6 +10,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+import com.kayoi.pixelplayerdesktop.data.preferences.AlbumArtColorAccuracy
+import com.kayoi.pixelplayerdesktop.data.preferences.AlbumArtPaletteStyle
+import com.kayoi.pixelplayerdesktop.domain.repository.SettingsRepository
+import com.kayoi.pixelplayerdesktop.ui.theme.dynamic.DynamicColorProcessor
 
 class ThemeStateHolder(
     private val settingsRepository: SettingsRepository,
@@ -35,6 +38,30 @@ class ThemeStateHolder(
     val isDarkMode: StateFlow<Boolean> = settingsRepository.settingsFlow
         .map { it.isDarkMode }
         .stateIn(coroutineScope, SharingStarted.Eagerly, true)
+
+    val uiScale: StateFlow<Float> = settingsRepository.settingsFlow
+        .map { it.uiScale }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, 1.0f)
+
+    fun setUiScale(scale: Float) {
+        coroutineScope.launch {
+            settingsRepository.setUiScale(scale)
+        }
+    }
+
+    private var lastScaleAdjustTimestamp = 0L
+
+    fun adjustUiScale(delta: Float) {
+        val now = System.currentTimeMillis()
+        if (now - lastScaleAdjustTimestamp < 120L) return
+        lastScaleAdjustTimestamp = now
+        val target = ((uiScale.value + delta) * 10).roundToInt() / 10f
+        setUiScale(target)
+    }
+
+    fun resetUiScale() {
+        setUiScale(1.0f)
+    }
 
     val isDynamicColorEnabled: StateFlow<Boolean> = settingsRepository.settingsFlow
         .map { it.isDynamicColorEnabled }
