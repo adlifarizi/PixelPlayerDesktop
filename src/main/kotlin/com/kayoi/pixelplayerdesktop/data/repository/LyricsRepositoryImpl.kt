@@ -1,19 +1,21 @@
 package com.kayoi.pixelplayerdesktop.data.repository
 
+import java.io.File
+
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.jaudiotagger.tag.FieldKey
+
 import com.kayoi.pixelplayerdesktop.data.database.LyricsDao
 import com.kayoi.pixelplayerdesktop.data.model.Lyrics
 import com.kayoi.pixelplayerdesktop.data.network.lyrics.LrcLibClient
 import com.kayoi.pixelplayerdesktop.data.preferences.LyricsSourcePreference
 import com.kayoi.pixelplayerdesktop.domain.repository.LyricsRepository
 import com.kayoi.pixelplayerdesktop.domain.repository.SettingsRepository
+import com.kayoi.pixelplayerdesktop.utils.AudioFileReaderUtils
 import com.kayoi.pixelplayerdesktop.utils.LrcParser
 import com.kayoi.pixelplayerdesktop.utils.MultiLangRomanizer
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import com.kayoi.pixelplayerdesktop.utils.AudioFileReaderUtils
-import org.jaudiotagger.tag.FieldKey
-import java.io.File
 
 class LyricsRepositoryImpl(
     private val lyricsDao: LyricsDao,
@@ -76,11 +78,17 @@ class LyricsRepositoryImpl(
 
     private fun fetchLocal(file: File): Lyrics? {
         if (!file.exists()) return null
-        val lrcFile = File(file.parentFile, "${file.nameWithoutExtension}.lrc")
-        if (lrcFile.exists() && lrcFile.isFile) {
+        val lrcCandidate = File(file.parentFile, "${file.nameWithoutExtension}.lrc")
+        val ttmlCandidate = File(file.parentFile, "${file.nameWithoutExtension}.ttml")
+        val lyricsFile = when {
+            lrcCandidate.exists() && lrcCandidate.isFile -> lrcCandidate
+            ttmlCandidate.exists() && ttmlCandidate.isFile -> ttmlCandidate
+            else -> null
+        }
+        if (lyricsFile != null) {
             return runCatching {
-                val lrcText = lrcFile.readText(Charsets.UTF_8)
-                LrcParser.parse(lrcText).copy(areFromRemote = false)
+                val text = lyricsFile.readText(Charsets.UTF_8)
+                LrcParser.parse(text).copy(areFromRemote = false)
             }.getOrNull()
         }
         return null
@@ -90,12 +98,27 @@ class LyricsRepositoryImpl(
         if (!file.exists()) return null
         return runCatching {
             val audioFile = AudioFileReaderUtils.readAudioFile(file)
-            val lyricsTag = audioFile.tag?.getFirst(FieldKey.LYRICS)
-            if (!lyricsTag.isNullOrBlank()) {
-                LrcParser.parse(lyricsTag).copy(areFromRemote = false)
-            } else {
-                null
+            val tag = audioFile.tag ?: return@runCatching null
+
+            var firstPlainLyrics: Lyrics? = null
+            val candidates = buildList {
+                val standardTag = tag.getFirst(FieldKey.LYRICS)
+                if (!standardTag.isNullOrBlank()) add(standardTag)
+                listOf("LYRICS", "SYNCEDLYRICS", "TTML", "UNSYNCEDLYRICS").forEach { key ->
+                    runCatching { tag.getFirst(key) }.getOrNull()?.let {
+                        if (it.isNotBlank()) add(it)
+                    }
+                }
+            }.distinct()
+
+            for (field in candidates) {
+                val parsed = LrcParser.parse(field).copy(areFromRemote = false)
+                if (!parsed.synced.isNullOrEmpty()) return@runCatching parsed
+                if (firstPlainLyrics == null && !parsed.plain.isNullOrEmpty()) {
+                    firstPlainLyrics = parsed
+                }
             }
+            firstPlainLyrics
         }.getOrNull()
     }
 

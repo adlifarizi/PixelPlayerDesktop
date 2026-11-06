@@ -176,7 +176,7 @@ fun LyricsSearchDialog(
                     when (uiState) {
                         is LyricsSearchUiState.Idle -> {
                             Text(
-                                text = "Enter search terms above or import a local .lrc file",
+                                text = "Enter search terms above or import a local lyric file",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.onSurfaceVariant
                             )
@@ -309,7 +309,7 @@ fun LyricsSearchDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Import .lrc")
+                        Text("Import Lyrics")
                     }
 
                     TextButton(

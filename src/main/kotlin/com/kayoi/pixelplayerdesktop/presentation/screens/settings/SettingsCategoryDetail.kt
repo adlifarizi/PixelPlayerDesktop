@@ -417,8 +417,8 @@ fun SettingsCategoryDetail(
                         }
 
                         ExpressiveSwitchRow(
-                            title = "Auto-scan .lrc files",
-                            subtitle = "Automatically scan and assign .lrc files in the same folder during library sync.",
+                            title = "Auto-scan lyric files",
+                            subtitle = "Automatically scan and assign .lrc and .ttml files in the same folder during library sync.",
                             checked = autoScanLrcFiles,
                             onCheckedChange = { viewModel.setAutoScanLrcFiles(it) },
                             leadingIcon = {

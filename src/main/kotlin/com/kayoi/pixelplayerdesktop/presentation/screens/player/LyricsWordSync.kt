@@ -74,11 +74,13 @@ internal fun resolveWordVisualStates(
         return List(words.size) { LyricWordVisualState(LyricWordPhase.Future, 0f) }
     }
 
-    val activeWordStart = words[activeIndex].time.toLong()
+    val activeWord = words[activeIndex]
+    val activeWordStart = activeWord.time.toLong()
     val nextWordStart = words.getOrNull(activeIndex + 1)?.time?.toLong() ?: lineEndTimeMs
+    val targetWordEnd = activeWord.endTime?.toLong() ?: nextWordStart
     val normalizedEnd = normalizeWordEndTime(
         currentWordTimeMs = activeWordStart,
-        nextWordTimeMs = nextWordStart,
+        nextWordTimeMs = targetWordEnd,
         lineEndTimeMs = lineEndTimeMs
     )
     val emphasisEnd = minOf(normalizedEnd, activeWordStart + MAX_WORD_EMPHASIS_DURATION_MS)
@@ -86,10 +88,13 @@ internal fun resolveWordVisualStates(
     val activeProgress = (
         (positionMs - activeWordStart).toFloat() / emphasisDuration.toFloat()
     ).coerceIn(0f, 1f)
+    val isPastActiveWordEnd = activeWord.endTime?.let { positionMs >= it.toLong() } ?: false
 
     return List(words.size) { index ->
         when {
-            index < activeIndex -> LyricWordVisualState(LyricWordPhase.Completed, 1f)
+            index < activeIndex || (index == activeIndex && isPastActiveWordEnd) -> {
+                LyricWordVisualState(LyricWordPhase.Completed, 1f)
+            }
             index == activeIndex -> LyricWordVisualState(LyricWordPhase.Active, activeProgress)
             else -> LyricWordVisualState(LyricWordPhase.Future, 0f)
         }

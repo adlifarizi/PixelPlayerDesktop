@@ -1,10 +1,13 @@
 package com.kayoi.pixelplayerdesktop.utils
 
-import com.kayoi.pixelplayerdesktop.data.model.Lyrics
-import com.kayoi.pixelplayerdesktop.data.model.SyncedLine
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+
+import com.kayoi.pixelplayerdesktop.data.model.Lyrics
+import com.kayoi.pixelplayerdesktop.data.model.SyncedLine
+import com.kayoi.pixelplayerdesktop.data.model.SyncedWord
 
 class LrcParserTest {
 
@@ -81,8 +84,8 @@ class LrcParserTest {
                     time = 1000,
                     line = "Hello world",
                     words = listOf(
-                        com.kayoi.pixelplayerdesktop.data.model.SyncedWord(1000, "Hello", startsNewWord = true),
-                        com.kayoi.pixelplayerdesktop.data.model.SyncedWord(2000, "world", startsNewWord = true)
+                        SyncedWord(1000, "Hello", startsNewWord = true),
+                        SyncedWord(2000, "world", startsNewWord = true)
                     )
                 )
             )
@@ -90,5 +93,137 @@ class LrcParserTest {
 
         val lrcString = LrcParser.toLrcString(lyrics)
         assertEquals("[00:01.00]<00:01.00>Hello <00:02.00>world", lrcString)
+    }
+
+    @Test
+    fun parseKugouLyricsSuccessfully() {
+        val kugouContent = """
+            [offset:100]
+            [500,1000]<0,400,0>Intro <400,600,0>sound
+            [1000,2000]<0,400,0>First <400,500,0>word <900,1000,0>line
+        """.trimIndent()
+
+        val result = LrcParser.parse(kugouContent)
+        val synced = requireNotNull(result.synced)
+        assertEquals(2, synced.size)
+
+        val introLine = synced[0]
+        assertEquals(600, introLine.time)
+        assertEquals("Intro sound", introLine.line)
+
+        val line = synced[1]
+        assertEquals(1100, line.time)
+        assertEquals("First word line", line.line)
+        assertEquals(3, line.words?.size)
+        assertEquals(1100, line.words?.get(0)?.time)
+        assertEquals(1500, line.words?.get(0)?.endTime)
+        assertEquals("First", line.words?.get(0)?.word)
+    }
+
+    @Test
+    fun parseEnhancedLrcWithVoiceAndBackingVocals() {
+        val lrcContent = """
+            [00:01.00]v1:Lead vocal
+            [bg: (backing)]
+        """.trimIndent()
+
+        val result = LrcParser.parse(lrcContent)
+        val line = requireNotNull(result.synced?.firstOrNull())
+        assertEquals(1, line.voice)
+        assertEquals("Lead vocal", line.line)
+        val background = requireNotNull(line.background)
+        assertEquals("(backing)", background.text)
+    }
+
+    @Test
+    fun pairTranslationLinesMergesIdenticalTimestamps() {
+        val lrcContent = """
+            [00:01.00]Original lyrics
+            [00:01.00]Translated lyrics
+        """.trimIndent()
+
+        val result = LrcParser.parse(lrcContent)
+        val synced = requireNotNull(result.synced)
+        assertEquals(1, synced.size)
+        assertEquals("Original lyrics", synced.first().line)
+        assertEquals("Translated lyrics", synced.first().translation)
+    }
+
+    @Test
+    fun parseTranslationTagUnderNormalLine() {
+        val lrcContent = """
+            [00:01.00]Original lyrics
+            [tr:Translated lyrics]
+        """.trimIndent()
+
+        val result = LrcParser.parse(lrcContent)
+        val synced = requireNotNull(result.synced)
+        assertEquals(1, synced.size)
+        assertEquals("Original lyrics", synced.first().line)
+        assertEquals("Translated lyrics", synced.first().translation)
+    }
+
+    @Test
+    fun pairTranslationLinesPreservesSimultaneousDuetsWithWordTimings() {
+        val lrcContent = """
+            [00:01.00]<00:01.00>First <00:01.50>singer
+            [00:01.00]<00:01.00>Second <00:01.50>singer
+        """.trimIndent()
+
+        val result = LrcParser.parse(lrcContent)
+        val synced = requireNotNull(result.synced)
+        assertEquals(2, synced.size)
+        assertEquals("First singer", synced[0].line)
+        assertNotNull(synced[0].words)
+        assertEquals("Second singer", synced[1].line)
+        assertNotNull(synced[1].words)
+    }
+
+    @Test
+    fun parseKugouLyricsWithUppercaseOffsetAndRomanization() {
+        val kugouContent = """
+            [OFFSET: 250]
+            [1000,2000]<0,500,0>你好
+        """.trimIndent()
+
+        val result = LrcParser.parse(kugouContent)
+        val synced = requireNotNull(result.synced)
+        assertEquals(1, synced.size)
+        assertEquals(1250, synced.first().time)
+        assertEquals("你好", synced.first().line)
+        assertEquals("Ni hao", synced.first().romanization)
+    }
+
+    @Test
+    fun hasSyncedTimestampsDetectsFormatsAccurately() {
+        assertTrue(LrcParser.hasSyncedTimestamps("[00:01.00]Hello world"))
+        assertTrue(LrcParser.hasSyncedTimestamps("[1000,2000]<0,400,0>Intro"))
+        assertTrue(LrcParser.hasSyncedTimestamps("<tt><body><div><p begin=\"1.000\">Hi</p></div></body></tt>"))
+        assertTrue(!LrcParser.hasSyncedTimestamps("Just some regular plain text lyrics without timestamps"))
+    }
+
+    @Test
+    fun sanitizePreservesMidLineBracketsInPlainText() {
+        val plain = """
+            Verse 1
+            He said [crying] why did you leave?
+            Chorus [repeat 2x]
+        """.trimIndent()
+
+        val result = LrcParser.parse(plain)
+        val plainLines = requireNotNull(result.plain)
+        assertEquals(3, plainLines.size)
+        assertEquals("He said [crying] why did you leave?", plainLines[1])
+        assertEquals("Chorus [repeat 2x]", plainLines[2])
+    }
+
+    @Test
+    fun sanitizeStripsLeadingNoiseBeforeTimestamp() {
+        val lrc = "01. [00:01.50]Hello world"
+        val result = LrcParser.parse(lrc)
+        val synced = requireNotNull(result.synced)
+        assertEquals(1, synced.size)
+        assertEquals(1500, synced[0].time)
+        assertEquals("Hello world", synced[0].line)
     }
 }

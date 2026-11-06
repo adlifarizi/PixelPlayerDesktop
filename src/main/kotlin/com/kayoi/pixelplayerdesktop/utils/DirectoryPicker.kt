@@ -33,12 +33,12 @@ object DirectoryPicker {
     }
 
     fun chooseLrcFile(
-        title: String = "Select .lrc Lyric File",
+        title: String = "Select Lyric File (.lrc, .ttml)",
         onSelected: (File) -> Unit
     ) {
         scope.launch {
             val file = FileKit.openFilePicker(
-                type = FileKitType.File("lrc"),
+                type = FileKitType.File(listOf("lrc", "ttml")),
                 dialogSettings = FileKitDialogSettings(title = title)
             )
             if (file != null) {

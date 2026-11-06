@@ -792,7 +792,7 @@ fun ExpandedPlayerScreen(
                 onSaveToSongFolder = {
                     showSaveLyricsDialog = false
                     val saved = viewModel.saveLyricsBesideCurrentSong()
-                    lyricsStatusMessage = if (saved != null) "Saved ${saved.name}" else "Failed to save .lrc"
+                    lyricsStatusMessage = if (saved != null) "Saved ${saved.name}" else "Failed to save lyrics"
                 },
                 onExportFile = {
                     showSaveLyricsDialog = false
@@ -804,7 +804,7 @@ fun ExpandedPlayerScreen(
                         initialDir = initialDir
                     ) { file ->
                         val ok = viewModel.exportLyricsToFile(file)
-                        lyricsStatusMessage = if (ok) "Exported ${file.name}" else "Failed to export .lrc"
+                        lyricsStatusMessage = if (ok) "Exported ${file.name}" else "Failed to export lyrics"
                     }
                 },
                 onEmbedToAudioFile = {

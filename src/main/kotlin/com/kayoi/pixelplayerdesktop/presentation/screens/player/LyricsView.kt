@@ -1,9 +1,5 @@
 package com.kayoi.pixelplayerdesktop.presentation.screens.player
 
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_lyrics
-import com.kayoi.pixelplayerdesktop.generated.resources.Res
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
-import org.jetbrains.compose.resources.painterResource
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -12,19 +8,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
@@ -36,26 +34,30 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.runtime.key
-import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.flow.StateFlow
+import org.jetbrains.compose.resources.painterResource
+
+import com.kayoi.pixelplayerdesktop.data.model.Lyrics
 import com.kayoi.pixelplayerdesktop.data.model.SyncedLine
 import com.kayoi.pixelplayerdesktop.data.model.SyncedWord
+import com.kayoi.pixelplayerdesktop.generated.resources.Res
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_lyrics
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
 import com.kayoi.pixelplayerdesktop.presentation.components.LocalWindowMinimized
-import com.kayoi.pixelplayerdesktop.data.model.Lyrics
 import com.kayoi.pixelplayerdesktop.presentation.components.subcomps.BubblesLine
 import com.kayoi.pixelplayerdesktop.utils.MultiLangRomanizer
 
@@ -286,27 +288,43 @@ fun LyricsView(
                             },
                         horizontalAlignment = horizontalAlignment
                     ) {
-                        if (line.words.isNullOrEmpty()) {
-                            Text(
-                                text = line.line,
-                                fontSize = mainFontSize,
-                                fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
-                                color = textColor,
-                                textAlign = lyricTextAlign,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                        if (line.words.isNullOrEmpty() || !isActive) {
+                            if (line.line.isNotBlank()) {
+                                Text(
+                                    text = line.line,
+                                    fontSize = mainFontSize,
+                                    fontWeight = if (isActive) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = textColor,
+                                    textAlign = lyricTextAlign,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
                         } else {
                             WordSyncedLineContent(
                                 line = line,
                                 isActive = isActive,
                                 isPast = isPast,
-                                positionMs = if (isActive) interpolatedPosition else line.time.toLong(),
+                                positionMs = interpolatedPosition,
                                 nextLineStartMs = syncedLines.getOrNull(index + 1)?.time ?: 0,
                                 alignment = alignment,
                                 activeColor = colors.primary,
                                 inactiveColor = colors.onSurfaceVariant.copy(alpha = 0.55f),
                                 pastColor = colors.onSurface,
                                 fontSize = mainFontSize
+                            )
+                        }
+
+                        if (!line.background?.text.isNullOrBlank()) {
+                            Text(
+                                text = line.background.text,
+                                fontSize = if (line.line.isBlank()) mainFontSize else romanizationFontSize,
+                                fontWeight = if (line.line.isBlank() && isActive) FontWeight.ExtraBold else FontWeight.Normal,
+                                fontStyle = FontStyle.Italic,
+                                color = textColor.copy(alpha = if (isActive) 0.85f else 0.65f),
+                                textAlign = lyricTextAlign,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = if (line.line.isBlank()) 0.dp else if (isCompact) 2.dp else 3.dp)
                             )
                         }
 

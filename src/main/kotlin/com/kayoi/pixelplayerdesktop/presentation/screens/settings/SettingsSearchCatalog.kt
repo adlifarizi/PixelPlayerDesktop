@@ -111,10 +111,10 @@ object SettingsSearchCatalog {
             icon = Res.drawable.ic_lyrics
         ),
         SettingSearchItem(
-            title = "Auto-scan .lrc Files",
-            description = "Automatically associate external .lrc sidecar files beside audio tracks",
+            title = "Auto-scan Lyric Files",
+            description = "Automatically associate external .lrc and .ttml sidecar files beside audio tracks",
             section = SettingsSection.LIBRARY,
-            keywords = listOf("lrc", "sidecar", "lyrics", "external", "files"),
+            keywords = listOf("lrc", "ttml", "sidecar", "lyrics", "external", "files"),
             icon = Res.drawable.ic_lyrics
         ),
         SettingSearchItem(

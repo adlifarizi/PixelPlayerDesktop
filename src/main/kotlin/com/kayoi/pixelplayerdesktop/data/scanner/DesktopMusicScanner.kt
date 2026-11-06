@@ -22,6 +22,7 @@ import kotlinx.coroutines.withContext
 import org.gagravarr.opus.OpusFile
 import org.gagravarr.opus.OpusTags
 import org.jaudiotagger.tag.FieldKey
+import org.jaudiotagger.tag.Tag
 
 import com.kayoi.pixelplayerdesktop.data.database.LyricsDao
 import com.kayoi.pixelplayerdesktop.data.database.MusicDao
@@ -283,8 +284,7 @@ class DesktopMusicScanner(
                 val genre = tags?.genre?.trim()?.ifBlank { null }
                     ?: getVorbisComment(tags, "genre")?.trim()?.ifBlank { null }
 
-                val lyrics = getVorbisComment(tags, "lyrics")?.trim()?.ifBlank { null }
-                    ?: getVorbisComment(tags, "unsyncedlyrics")?.trim()?.ifBlank { null }
+                val lyrics = extractOpusLyrics(tags)
 
                 val trackNumber = tags?.trackNumber?.toIntOrNull()
                     ?: getVorbisComment(tags, "tracknumber")?.toIntOrNull()
@@ -397,7 +397,7 @@ class DesktopMusicScanner(
         val album = tag?.getFirst(FieldKey.ALBUM)?.trim()?.ifBlank { null } ?: "Unknown Album"
         val albumArtist = tag?.getFirst(FieldKey.ALBUM_ARTIST)?.trim()?.ifBlank { null }
         val genre = tag?.getFirst(FieldKey.GENRE)?.trim()?.ifBlank { null }
-        val lyrics = tag?.getFirst(FieldKey.LYRICS)?.trim()?.ifBlank { null }
+        val lyrics = extractEmbeddedLyrics(tag)
 
         val year = parseYear(tag?.getFirst(FieldKey.YEAR))
             ?: parseYear(tag?.getFirst(FieldKey.ORIGINAL_YEAR))
@@ -504,7 +504,7 @@ class DesktopMusicScanner(
             val album = tag?.getFirst(FieldKey.ALBUM)?.trim()?.ifBlank { null } ?: "Unknown Album"
             val albumArtist = tag?.getFirst(FieldKey.ALBUM_ARTIST)?.trim()?.ifBlank { null }
             val genre = tag?.getFirst(FieldKey.GENRE)?.trim()?.ifBlank { null }
-            val lyrics = tag?.getFirst(FieldKey.LYRICS)?.trim()?.ifBlank { null }
+            val lyrics = extractEmbeddedLyrics(tag)
 
             val year = parseYear(tag?.getFirst(FieldKey.YEAR))
                 ?: parseYear(tag?.getFirst(FieldKey.ORIGINAL_YEAR))
@@ -631,7 +631,7 @@ class DesktopMusicScanner(
         return findFolderArtworkCached(audioFile.parentFile)
     }
 
-    private fun extractArtworkToCache(tag: org.jaudiotagger.tag.Tag?, audioFile: File): String? {
+    private fun extractArtworkToCache(tag: Tag?, audioFile: File): String? {
         if (tag != null) {
             val artwork = tag.firstArtwork
             val binaryData = artwork?.binaryData
@@ -642,6 +642,38 @@ class DesktopMusicScanner(
         }
 
         return findFolderArtworkCached(audioFile.parentFile)
+    }
+
+    private fun selectPreferredLyrics(candidates: List<String>): String? {
+        val distinct = candidates.distinct()
+        for (candidate in distinct) {
+            if (LrcParser.hasSyncedTimestamps(candidate)) return candidate
+        }
+        return distinct.firstOrNull()
+    }
+
+    private fun extractEmbeddedLyrics(tag: Tag?): String? {
+        if (tag == null) return null
+        return selectPreferredLyrics(
+            buildList {
+                val standardTag = tag.getFirst(FieldKey.LYRICS)?.trim()?.ifBlank { null }
+                if (standardTag != null) add(standardTag)
+                listOf("SYNCEDLYRICS", "TTML", "LYRICS", "UNSYNCEDLYRICS").forEach { key ->
+                    runCatching { tag.getFirst(key) }.getOrNull()?.trim()?.ifBlank { null }?.let(::add)
+                }
+            }
+        )
+    }
+
+    private fun extractOpusLyrics(tags: OpusTags?): String? {
+        if (tags == null) return null
+        return selectPreferredLyrics(
+            buildList {
+                listOf("syncedlyrics", "ttml", "lyrics", "unsyncedlyrics").forEach { key ->
+                    getVorbisComment(tags, key)?.trim()?.ifBlank { null }?.let(::add)
+                }
+            }
+        )
     }
 
     /**
@@ -734,11 +766,17 @@ class DesktopMusicScanner(
     }
 
     private suspend fun scanAndCacheLrcFile(audioFile: File, songId: String) {
-        val lrcFile = File(audioFile.parentFile, "${audioFile.nameWithoutExtension}.lrc")
-        if (lrcFile.exists() && lrcFile.isFile) {
+        val lrcCandidate = File(audioFile.parentFile, "${audioFile.nameWithoutExtension}.lrc")
+        val ttmlCandidate = File(audioFile.parentFile, "${audioFile.nameWithoutExtension}.ttml")
+        val lyricsFile = when {
+            lrcCandidate.exists() && lrcCandidate.isFile -> lrcCandidate
+            ttmlCandidate.exists() && ttmlCandidate.isFile -> ttmlCandidate
+            else -> null
+        }
+        if (lyricsFile != null) {
             runCatching {
-                val lrcText = lrcFile.readText(Charsets.UTF_8)
-                val parsed = LrcParser.parse(lrcText)
+                val text = lyricsFile.readText(Charsets.UTF_8)
+                val parsed = LrcParser.parse(text)
                 lyricsDao?.insertOrUpdateLyrics(songId, parsed)
             }
         }
