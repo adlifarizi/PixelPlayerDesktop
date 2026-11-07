@@ -49,6 +49,7 @@ import com.kayoi.pixelplayerdesktop.data.repository.LyricsRepositoryImpl
 import com.kayoi.pixelplayerdesktop.data.repository.MusicRepositoryImpl
 import com.kayoi.pixelplayerdesktop.data.repository.SettingsRepositoryImpl
 import com.kayoi.pixelplayerdesktop.data.scanner.DesktopMusicScanner
+import com.kayoi.pixelplayerdesktop.data.watcher.LibraryWatcherService
 import com.kayoi.pixelplayerdesktop.domain.player.AudioEngine
 import com.kayoi.pixelplayerdesktop.domain.player.SleepTimerSession
 import com.kayoi.pixelplayerdesktop.domain.repository.LyricsRepository
@@ -139,6 +140,15 @@ val repositoryModule: Module = module {
     single { DesktopMusicScanner(musicDao = get(), lyricsDao = get(), ioDispatcher = get()) }
     single { DesktopMetadataEditor(musicDao = get(), ioDispatcher = get()) }
     single { GitHubReleaseClient(okHttpClient = get(), json = get(), ioDispatcher = get()) }
+    single {
+        LibraryWatcherService(
+            scanner = get(),
+            musicDao = get(),
+            settingsRepository = get(),
+            coroutineScope = get(),
+            ioDispatcher = get()
+        )
+    }
 }
 
 val playerModule: Module = module {
@@ -176,7 +186,8 @@ val stateModule: Module = module {
             settingsRepository = get(),
             lyricsRepository = get(),
             scanner = get(),
-            coroutineScope = get()
+            coroutineScope = get(),
+            watcherService = get()
         )
     }
     single {

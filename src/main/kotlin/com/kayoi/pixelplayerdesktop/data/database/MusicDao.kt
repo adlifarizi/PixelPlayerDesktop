@@ -354,6 +354,32 @@ class MusicDao(
         }
     }
 
+    suspend fun deleteSongsByPaths(paths: Collection<String>) = withContext(ioDispatcher) {
+        if (paths.isEmpty()) return@withContext
+        database.withConnection { conn ->
+            conn.autoCommit = false
+            try {
+                conn.prepareStatement("DELETE FROM songs WHERE path = ? AND navidrome_id IS NULL AND jellyfin_id IS NULL").use { stmt ->
+                    for (path in paths) {
+                        stmt.setString(1, path)
+                        stmt.addBatch()
+                    }
+                    stmt.executeBatch()
+                }
+                conn.createStatement().use { stmt ->
+                    stmt.executeUpdate("DELETE FROM song_artists WHERE song_id NOT IN (SELECT id FROM songs)")
+                    stmt.executeUpdate("DELETE FROM artists WHERE id NOT IN (SELECT DISTINCT artist_id FROM song_artists)")
+                }
+                conn.commit()
+                database.notifyTableChanged("songs")
+                database.notifyTableChanged("artists")
+            } catch (e: Exception) {
+                conn.rollback()
+                throw e
+            }
+        }
+    }
+
     suspend fun deleteSongsInDirectory(directoryPath: String) = withContext(ioDispatcher) {
         val abs = File(directoryPath).absolutePath
         val prefix = if (abs.endsWith(File.separator)) abs else abs + File.separator

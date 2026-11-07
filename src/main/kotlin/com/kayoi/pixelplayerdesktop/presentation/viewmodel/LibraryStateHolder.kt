@@ -36,6 +36,7 @@ import com.kayoi.pixelplayerdesktop.data.playlist.M3uParseResult
 import com.kayoi.pixelplayerdesktop.data.preferences.LyricsSourcePreference
 import com.kayoi.pixelplayerdesktop.data.scanner.DesktopMusicScanner
 import com.kayoi.pixelplayerdesktop.data.scanner.ScanProgress
+import com.kayoi.pixelplayerdesktop.data.watcher.LibraryWatcherService
 import com.kayoi.pixelplayerdesktop.domain.repository.LyricsRepository
 import com.kayoi.pixelplayerdesktop.domain.repository.MusicRepository
 import com.kayoi.pixelplayerdesktop.domain.repository.SettingsRepository
@@ -50,8 +51,13 @@ class LibraryStateHolder(
     private val settingsRepository: SettingsRepository,
     private val scanner: DesktopMusicScanner,
     private val lyricsRepository: LyricsRepository? = null,
-    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    private val watcherService: LibraryWatcherService? = null
 ) {
+
+    init {
+        watcherService?.start()
+    }
 
     private val _storageFilter = MutableStateFlow(StorageFilter.ALL)
     val storageFilter: StateFlow<StorageFilter> = _storageFilter.asStateFlow()
