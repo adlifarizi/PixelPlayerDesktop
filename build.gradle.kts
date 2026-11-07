@@ -73,6 +73,7 @@ dependencies {
     implementation("org.gagravarr:vorbis-java-core:0.8")
     implementation("net.java.dev.jna:jna:5.16.0")
     implementation("net.java.dev.jna:jna-platform:5.16.0")
+    implementation("io.methvin:directory-watcher:0.19.1")
 
     // Reorderable LazyList
     implementation("sh.calvin.reorderable:reorderable:2.4.3")

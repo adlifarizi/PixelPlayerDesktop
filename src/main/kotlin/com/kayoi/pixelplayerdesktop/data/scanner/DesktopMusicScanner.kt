@@ -63,6 +63,7 @@ class DesktopMusicScanner(
 ) {
 
     private val supportedExtensions = setOf("mp3", "flac", "ogg", "opus", "m4a", "wav", "aac", "wma")
+    val supportedAudioExtensions: Set<String> get() = supportedExtensions
 
     private val commonArtworkNames = listOf(
         "cover.jpg", "cover.png", "cover.jpeg",
@@ -213,6 +214,65 @@ class DesktopMusicScanner(
             val error = ScanProgress.Error(e.message ?: "Unknown scanning error")
             _scanProgress.value = error
             error
+        }
+    }
+
+    suspend fun scanFiles(
+        files: List<File>,
+        artistDelimiters: List<String> = DEFAULT_ARTIST_DELIMITERS,
+        wordDelimiters: List<String> = DEFAULT_WORD_DELIMITERS,
+        extractArtistFromTitle: Boolean = true,
+        autoScanLrcFiles: Boolean = false
+    ): List<Song> = withContext(ioDispatcher) {
+        if (files.isEmpty()) return@withContext emptyList()
+        val songsToUpsert = mutableListOf<Song>()
+        for (file in files) {
+            try {
+                if (!file.exists() || !file.isFile || !file.canRead()) continue
+                val ext = file.extension.lowercase()
+                if (!supportedExtensions.contains(ext)) continue
+                val existing = musicDao.getSongByPath(file.absolutePath)
+                val lastModified = file.lastModified()
+                if (existing != null && existing.dateModified == lastModified && !(existing.duration == 0L && ext == "aac")) {
+                    continue
+                }
+                val song = extractSongMetadata(
+                    file = file,
+                    existingId = existing?.id,
+                    artistDelimiters = artistDelimiters,
+                    wordDelimiters = wordDelimiters,
+                    extractArtistFromTitle = extractArtistFromTitle
+                )
+                if (song != null) {
+                    songsToUpsert.add(song)
+                    if (autoScanLrcFiles && lyricsDao != null) {
+                        scanAndCacheLrcFile(file, song.id)
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+        if (songsToUpsert.isNotEmpty()) {
+            songsToUpsert.chunked(500).forEach { batch ->
+                musicDao.upsertSongs(batch)
+            }
+        }
+        songsToUpsert
+    }
+
+    suspend fun scanLrcFile(lrcOrTtmlFile: File) = withContext(ioDispatcher) {
+        if (lyricsDao == null || !lrcOrTtmlFile.exists() || !lrcOrTtmlFile.isFile || !lrcOrTtmlFile.canRead()) return@withContext
+        val parent = lrcOrTtmlFile.parentFile ?: return@withContext
+        val baseName = lrcOrTtmlFile.nameWithoutExtension
+        for (ext in supportedExtensions) {
+            val candidateAudio = File(parent, "$baseName.$ext")
+            if (candidateAudio.exists()) {
+                val song = musicDao.getSongByPath(candidateAudio.absolutePath)
+                if (song != null) {
+                    scanAndCacheLrcFile(candidateAudio, song.id)
+                    break
+                }
+            }
         }
     }
 

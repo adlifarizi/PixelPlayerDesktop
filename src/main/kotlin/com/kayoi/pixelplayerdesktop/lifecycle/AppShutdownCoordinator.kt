@@ -11,6 +11,7 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.stopKoin
 
 import com.kayoi.pixelplayerdesktop.data.database.PixelPlayerDatabase
+import com.kayoi.pixelplayerdesktop.data.watcher.LibraryWatcherService
 import com.kayoi.pixelplayerdesktop.domain.player.AudioEngine
 import com.kayoi.pixelplayerdesktop.platform.mediasession.MediaSessionBridge
 import com.kayoi.pixelplayerdesktop.presentation.viewmodel.DesktopListeningStatsTracker
@@ -55,6 +56,11 @@ object AppShutdownCoordinator {
             runCatching {
                 val statsTracker = GlobalContext.getOrNull()?.getOrNull<DesktopListeningStatsTracker>()
                 statsTracker?.finalizeCurrentSession(forceSynchronous = true)
+            }
+
+            runCatching {
+                val watcherService = GlobalContext.getOrNull()?.getOrNull<LibraryWatcherService>()
+                watcherService?.close()
             }
 
             runCatching {

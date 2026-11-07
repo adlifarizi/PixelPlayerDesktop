@@ -44,6 +44,7 @@ Audio metadata and platform integration:
 | JAudioTagger | `net.jthink:jaudiotagger:3.0.1` | LGPL-3.0 |
 | Vorbis Java Core | `org.gagravarr:vorbis-java-core:0.8` | Apache-2.0 |
 | Java Native Access (JNA) | `net.java.dev.jna:jna:5.16.0` | LGPL-2.1 / Apache-2.0 |
+| Directory Watcher | `io.methvin:directory-watcher:0.19.1` | Apache-2.0 |
 | DBus Java Core (MPRIS / Linux) | `com.github.hypfvieh:dbus-java-core:5.1.0` | LGPL-3.0 / Apache-2.0 |
 
 Data, serialization and networking:
