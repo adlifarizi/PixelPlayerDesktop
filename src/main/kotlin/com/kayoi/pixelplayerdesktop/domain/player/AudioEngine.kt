@@ -20,6 +20,7 @@ interface AudioEngine {
     val durationMs: StateFlow<Long>
     val volume: StateFlow<Float> // 0.0f to 1.0f
     val isMuted: StateFlow<Boolean>
+    val playbackSpeed: StateFlow<Float> get() = kotlinx.coroutines.flow.MutableStateFlow(1.0f)
     val isCrossfading: StateFlow<Boolean> get() = kotlinx.coroutines.flow.MutableStateFlow(false)
     val errorEvents: SharedFlow<String>
     val completionEvents: SharedFlow<Unit>
@@ -32,6 +33,7 @@ interface AudioEngine {
     fun seekTo(positionMs: Long)
     fun setVolume(volume: Float)
     fun setMute(muted: Boolean)
+    fun setPlaybackSpeed(speed: Float) {}
     fun setReplayGain(enabled: Boolean, mode: String = "track")
     fun setEqualizer(enabled: Boolean, bands: List<Float>, preamp: Float = 0f) {}
     val audioDeviceFallbackEvents: SharedFlow<String> get() = MutableSharedFlow()
@@ -39,7 +41,7 @@ interface AudioEngine {
     fun getAudioDevices(): List<AudioDevice> = emptyList()
     fun setAudioDevice(deviceName: String) {}
     fun getCurrentAudioDevice(): String = "auto"
-    fun crossfadeTo(mediaPathOrUri: String, durationMs: Long) {
+    fun crossfadeTo(mediaPathOrUri: String, durationMs: Long, targetSpeed: Float? = null) {
         play(mediaPathOrUri)
     }
     fun setAudioFadeOnPlayPause(enabled: Boolean) {}

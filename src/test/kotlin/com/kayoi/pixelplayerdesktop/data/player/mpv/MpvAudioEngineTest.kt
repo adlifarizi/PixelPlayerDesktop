@@ -31,6 +31,12 @@ class MpvAudioEngineTest {
             engine.setMute(false)
             assertFalse(engine.isMuted.value)
 
+            assertEquals(1.0f, engine.playbackSpeed.value)
+            engine.setPlaybackSpeed(1.25f)
+            assertEquals(1.25f, engine.playbackSpeed.value)
+            engine.setPlaybackSpeed(1.0f)
+            assertEquals(1.0f, engine.playbackSpeed.value)
+
             engine.setReplayGain(true, "album")
             engine.setEqualizer(true, listOf(2f, 3f, 0f, -1f, 0f, 0f, 1f, 2f, 3f, 4f), preamp = 1.5f)
             engine.setAudioFadeOnPlayPause(false)
@@ -102,8 +108,12 @@ class MpvAudioEngineTest {
             }
             assertEquals(PlaybackState.PLAYING, engine.playbackState.value)
 
-            engine.crossfadeTo(wav2.absolutePath, 1500L)
+            engine.setPlaybackSpeed(0.9f)
+            assertEquals(0.9f, engine.playbackSpeed.value)
+
+            engine.crossfadeTo(wav2.absolutePath, 1500L, targetSpeed = 1.5f)
             assertTrue(engine.isCrossfading.value)
+            assertEquals(1.5f, engine.playbackSpeed.value)
 
             engine.stop()
             assertFalse(engine.isCrossfading.value)

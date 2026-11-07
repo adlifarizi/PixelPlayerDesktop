@@ -20,6 +20,7 @@ import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_music_note
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_palette
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_settings
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_settings_backup_restore
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_speed
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_tab
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_tune
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_view_week
@@ -220,6 +221,13 @@ object SettingsSearchCatalog {
             section = SettingsSection.PLAYBACK,
             keywords = listOf("history", "queue", "previous", "played", "tracks"),
             icon = Res.drawable.ic_automirrored_rounded_queue_music
+        ),
+        SettingSearchItem(
+            title = "Saved Song Speeds",
+            description = "View count of individual songs with custom playback speed and clear all overrides",
+            section = SettingsSection.PLAYBACK,
+            keywords = listOf("speed", "playback speed", "tempo", "rate", "fast", "slow", "saved speed"),
+            icon = Res.drawable.ic_rounded_speed
         ),
         SettingSearchItem(
             title = "Close to System Tray",

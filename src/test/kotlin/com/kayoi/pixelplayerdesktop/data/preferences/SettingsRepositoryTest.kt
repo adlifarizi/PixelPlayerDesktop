@@ -40,6 +40,8 @@ class SettingsRepositoryTest {
         repository.setLyricsAlignment("center")
         repository.setLyricsSyncOffset("song_123", 500)
         repository.setLyricsSyncOffset("song_456", -300)
+        repository.setSongPlaybackSpeed("song_123", 1.25f)
+        repository.setSongPlaybackSpeed("song_456", 0.85f)
 
         val updated = repository.getSettings()
         assertEquals(false, updated.isDynamicColorEnabled)
@@ -53,6 +55,20 @@ class SettingsRepositoryTest {
         assertEquals("center", updated.lyricsAlignment)
         assertEquals(500, updated.lyricsSyncOffsets["song_123"])
         assertEquals(-300, updated.lyricsSyncOffsets["song_456"])
+        assertEquals(1.25f, updated.songPlaybackSpeeds["song_123"])
+        assertEquals(0.85f, updated.songPlaybackSpeeds["song_456"])
+
+        // Setting speed to 1.0f saves 1.0f explicitly
+        repository.setSongPlaybackSpeed("song_123", 1.0f)
+        assertEquals(1.0f, repository.getSettings().songPlaybackSpeeds["song_123"])
+
+        // Setting speed to null removes entry
+        repository.setSongPlaybackSpeed("song_123", null)
+        assertEquals(null, repository.getSettings().songPlaybackSpeeds["song_123"])
+        assertEquals(0.85f, repository.getSettings().songPlaybackSpeeds["song_456"])
+
+        repository.clearAllSongPlaybackSpeeds()
+        assertTrue(repository.getSettings().songPlaybackSpeeds.isEmpty())
 
         // Reset offset to 0 should remove the entry
         repository.setLyricsSyncOffset("song_123", 0)

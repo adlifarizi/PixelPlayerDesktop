@@ -67,6 +67,9 @@ class MpvAudioEngine(
     private val _isMuted = MutableStateFlow(false)
     override val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
 
+    private val _playbackSpeed = MutableStateFlow(1.0f)
+    override val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
+
     private val _errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 16)
     override val errorEvents: SharedFlow<String> = _errorEvents.asSharedFlow()
 
@@ -135,6 +138,8 @@ class MpvAudioEngine(
         api.mpv_set_property_string(handle, "audio-client-name", "PixelPlayer")
         api.mpv_set_property_string(handle, "audio-pitch-correction", "yes")
         api.mpv_set_property_string(handle, "audio-fallback-to-null", "no")
+        val speedStr = String.format(java.util.Locale.US, "%.2f", _playbackSpeed.value)
+        api.mpv_set_property_string(handle, "speed", speedStr)
 
         val aoDriver = when {
             Platform.isWindows() -> "wasapi"
@@ -555,6 +560,19 @@ class MpvAudioEngine(
         standby?.let { api.mpv_set_property_string(it, "mute", muteStr) }
     }
 
+    override fun setPlaybackSpeed(speed: Float): Unit = synchronized(commandLock) {
+        if (isClosed()) return
+        val clamped = speed.coerceIn(0.25f, 3.0f)
+        if (_playbackSpeed.value == clamped) return
+        _playbackSpeed.value = clamped
+        val speedStr = String.format(java.util.Locale.US, "%.2f", clamped)
+        val (player, standby) = playerPair.get()
+        player?.let { api.mpv_set_property_string(it, "speed", speedStr) }
+        if (!_isCrossfading.value) {
+            standby?.let { api.mpv_set_property_string(it, "speed", speedStr) }
+        }
+    }
+
     private fun applyEffectiveVolume() {
         if (!_isCrossfading.value && playPauseFadeJob?.isActive != true) {
             val (player, standby) = playerPair.get()
@@ -721,7 +739,7 @@ class MpvAudioEngine(
         }
     }
 
-    override fun crossfadeTo(mediaPathOrUri: String, durationMs: Long): Unit = synchronized(commandLock) {
+    override fun crossfadeTo(mediaPathOrUri: String, durationMs: Long, targetSpeed: Float?): Unit = synchronized(commandLock) {
         if (isClosed()) return
         if (activeCrossfadeSession != null || _isCrossfading.value) {
             cancelCrossfade()
@@ -730,6 +748,7 @@ class MpvAudioEngine(
 
         val (outgoingPlayer, incomingPlayer) = playerPair.get()
         if (outgoingPlayer == null || incomingPlayer == null || _playbackState.value != PlaybackState.PLAYING) {
+            targetSpeed?.let { setPlaybackSpeed(it) }
             play(mediaPathOrUri)
             return
         }
@@ -762,6 +781,11 @@ class MpvAudioEngine(
             _durationMs.value = 0L
 
             playerPair.set(PlayerPair(active = incomingPlayer, standby = outgoingPlayer))
+
+            val effectiveSpeed = (targetSpeed ?: _playbackSpeed.value).coerceIn(0.25f, 3.0f)
+            _playbackSpeed.value = effectiveSpeed
+            val speedStr = String.format(java.util.Locale.US, "%.2f", effectiveSpeed)
+            api.mpv_set_property_string(incomingPlayer, "speed", speedStr)
 
             setVolumeOnHandle(incomingPlayer, 0f)
             val cmdStatus = api.mpv_command(incomingPlayer, arrayOf("loadfile", validPath, "replace"))

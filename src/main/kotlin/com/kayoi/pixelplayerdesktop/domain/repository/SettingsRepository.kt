@@ -52,6 +52,8 @@ interface SettingsRepository {
     suspend fun setLyricsAlignment(alignment: String)
     suspend fun setLyricsTextSize(size: String)
     suspend fun setLyricsSyncOffset(songId: String, offsetMs: Int)
+    suspend fun setSongPlaybackSpeed(songId: String, speed: Float?)
+    suspend fun clearAllSongPlaybackSpeeds()
     suspend fun setShowLyricsRomanization(enabled: Boolean)
     suspend fun setReplayGainEnabled(enabled: Boolean)
     suspend fun setReplayGainMode(mode: String)

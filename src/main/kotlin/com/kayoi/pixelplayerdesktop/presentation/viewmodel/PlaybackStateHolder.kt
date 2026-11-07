@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -233,6 +234,20 @@ class PlaybackStateHolder(
     val playerInfo: StateFlow<PlayerInfo> = _playerInfo.asStateFlow()
 
     val currentPositionMs: StateFlow<Long> = audioEngine.currentPositionMs
+    val playbackSpeed: StateFlow<Float> = audioEngine.playbackSpeed
+    private var sessionPlaybackSpeed: Float = 1.0f
+    private var baseSessionSpeedBeforeSong: Float = 1.0f
+
+    val isCurrentSongSpeedSaved: StateFlow<Boolean> = combine(
+        queueManager.currentSong,
+        settingsRepository.settingsFlow
+    ) { song, settings ->
+        if (song == null) false else settings.songPlaybackSpeeds.containsKey(song.id)
+    }.stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
+    val savedSongSpeedsCount: StateFlow<Int> = settingsRepository.settingsFlow
+        .map { it.songPlaybackSpeeds.size }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, 0)
 
     private val _lyricsSearchUiState = MutableStateFlow<LyricsSearchUiState>(LyricsSearchUiState.Idle)
     val lyricsSearchUiState: StateFlow<LyricsSearchUiState> = _lyricsSearchUiState.asStateFlow()
@@ -384,6 +399,11 @@ class PlaybackStateHolder(
                 if (countedPlay != null && countedPlay.songId != song?.id) {
                     sleepTimerSession.setCountedPlay(null)
                 }
+
+                val savedSpeed = song?.let { settingsRepository.settingsFlow.value.songPlaybackSpeeds[it.id] }
+                baseSessionSpeedBeforeSong = sessionPlaybackSpeed
+                val targetSpeed = savedSpeed ?: sessionPlaybackSpeed
+                audioEngine.setPlaybackSpeed(targetSpeed)
 
                 listeningStatsTracker.onSongChanged(song, audioEngine.playbackState.value == PlaybackState.PLAYING)
                 val isFav = if (song != null) musicRepository.isFavorite(song.id) else false
@@ -655,8 +675,9 @@ class PlaybackStateHolder(
                 if (remaining > 500L) {
                     val nextSong = queueManager.peekNextSong()
                     if (nextSong != null) {
+                        val nextSpeed = settingsRepository.settingsFlow.value.songPlaybackSpeeds[nextSong.id] ?: sessionPlaybackSpeed
+                        audioEngine.crossfadeTo(resolvePath(nextSong), remaining.coerceAtMost(fadeDurationMs), nextSpeed)
                         queueManager.getNextSong()
-                        audioEngine.crossfadeTo(resolvePath(nextSong), remaining.coerceAtMost(fadeDurationMs))
                     }
                 }
                 return@launch
@@ -685,8 +706,9 @@ class PlaybackStateHolder(
             ) return@launch
 
             val nextSong = queueManager.peekNextSong() ?: return@launch
+            val nextSpeed = settingsRepository.settingsFlow.value.songPlaybackSpeeds[nextSong.id] ?: sessionPlaybackSpeed
+            audioEngine.crossfadeTo(resolvePath(nextSong), fadeDurationMs, nextSpeed)
             queueManager.getNextSong()
-            audioEngine.crossfadeTo(resolvePath(nextSong), fadeDurationMs)
         }
     }
 
@@ -768,6 +790,53 @@ class PlaybackStateHolder(
         audioEngine.setMute(newMute)
         coroutineScope.launch {
             settingsRepository.setMuted(newMute)
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float, persist: Boolean = true) {
+        val song = queueManager.currentSong.value
+        if (isCurrentSongSpeedSaved.value && song != null) {
+            if (persist) {
+                coroutineScope.launch {
+                    settingsRepository.setSongPlaybackSpeed(song.id, speed)
+                }
+            }
+        } else {
+            sessionPlaybackSpeed = speed
+        }
+        audioEngine.setPlaybackSpeed(speed)
+    }
+
+    fun setRememberSpeedForCurrentSong(remember: Boolean) {
+        val song = queueManager.currentSong.value ?: return
+        val currentSpeed = audioEngine.playbackSpeed.value
+        coroutineScope.launch {
+            if (remember) {
+                sessionPlaybackSpeed = baseSessionSpeedBeforeSong
+                settingsRepository.setSongPlaybackSpeed(song.id, currentSpeed)
+            } else {
+                settingsRepository.setSongPlaybackSpeed(song.id, null)
+                sessionPlaybackSpeed = currentSpeed
+            }
+        }
+    }
+
+    fun resetPlaybackSpeed() {
+        val song = queueManager.currentSong.value
+        sessionPlaybackSpeed = 1.0f
+        baseSessionSpeedBeforeSong = 1.0f
+        audioEngine.setPlaybackSpeed(1.0f)
+        if (song != null) {
+            coroutineScope.launch {
+                settingsRepository.setSongPlaybackSpeed(song.id, null)
+            }
+        }
+    }
+
+    fun clearAllSavedSongSpeeds() {
+        coroutineScope.launch {
+            settingsRepository.clearAllSongPlaybackSpeeds()
+            audioEngine.setPlaybackSpeed(sessionPlaybackSpeed)
         }
     }
 

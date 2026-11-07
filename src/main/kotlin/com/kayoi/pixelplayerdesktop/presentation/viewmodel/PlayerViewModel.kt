@@ -58,6 +58,9 @@ class PlayerViewModel(
     val playbackState = playbackStateHolder.playbackState
     val playbackErrorEvents = playbackStateHolder.errorEvents
     val lyricsSearchUiState = playbackStateHolder.lyricsSearchUiState
+    val playbackSpeed = playbackStateHolder.playbackSpeed
+    val isCurrentSongSpeedSaved = playbackStateHolder.isCurrentSongSpeedSaved
+    val savedSongSpeedsCount = playbackStateHolder.savedSongSpeedsCount
 
     private val _showShortcutsDialog = MutableStateFlow(false)
     val showShortcutsDialog: StateFlow<Boolean> = _showShortcutsDialog.asStateFlow()
@@ -385,6 +388,11 @@ class PlayerViewModel(
     suspend fun fetchOnlineCoverArt(releaseId: String): Result<ByteArray?> {
         return libraryStateHolder.fetchOnlineCoverArt(releaseId)
     }
+
+    fun setPlaybackSpeed(speed: Float, persist: Boolean = true) = playbackStateHolder.setPlaybackSpeed(speed, persist)
+    fun setRememberSpeedForCurrentSong(remember: Boolean) = playbackStateHolder.setRememberSpeedForCurrentSong(remember)
+    fun resetPlaybackSpeed() = playbackStateHolder.resetPlaybackSpeed()
+    fun clearAllSavedSongSpeeds() = playbackStateHolder.clearAllSavedSongSpeeds()
 
     fun setSleepTimer(minutes: Int) = sleepTimerStateHolder?.setSleepTimer(minutes)
     fun setEndOfTrackTimer(enabled: Boolean) = sleepTimerStateHolder?.setEndOfTrackTimer(enabled)

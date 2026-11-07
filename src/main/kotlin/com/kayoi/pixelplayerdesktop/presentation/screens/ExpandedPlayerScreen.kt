@@ -7,6 +7,7 @@ import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_keyboard
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_keyboard_arrow_down
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_more_vert
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_speed
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_timer
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_speaker
 import org.jetbrains.compose.resources.painterResource
@@ -84,6 +85,7 @@ import com.kayoi.pixelplayerdesktop.data.model.Artist
 import com.kayoi.pixelplayerdesktop.data.model.Song
 import com.kayoi.pixelplayerdesktop.presentation.components.AudioDeviceSelectorDialog
 import com.kayoi.pixelplayerdesktop.presentation.components.LyricsSearchDialog
+import com.kayoi.pixelplayerdesktop.presentation.components.PlaybackSpeedDialog
 import com.kayoi.pixelplayerdesktop.presentation.components.QueueSidePanel
 import com.kayoi.pixelplayerdesktop.presentation.components.QueueToggleButton
 import com.kayoi.pixelplayerdesktop.presentation.components.SaveLyricsDialog
@@ -141,6 +143,8 @@ fun ExpandedPlayerScreen(
     val equalizerEnabled by viewModel.equalizerEnabled.collectAsState()
     val selectedAudioDevice by viewModel.selectedAudioDevice.collectAsState()
     val availableAudioDevices by viewModel.availableAudioDevices.collectAsState()
+    val playbackSpeed by viewModel.playbackSpeed.collectAsState()
+    val isCurrentSongSpeedSaved by viewModel.isCurrentSongSpeedSaved.collectAsState()
     val isEndOfTrackActive by viewModel.isEndOfTrackTimerActive.collectAsState()
     val activeDurationMinutes by viewModel.activeTimerDurationMinutes.collectAsState()
     val sleepTimerPlayCount by viewModel.sleepTimerPlayCount.collectAsState()
@@ -148,6 +152,7 @@ fun ExpandedPlayerScreen(
     val coroutineScope = rememberCoroutineScope()
     var showEqualizerDialog by remember { mutableStateOf(false) }
     var showAudioDeviceDialog by remember { mutableStateOf(false) }
+    var showPlaybackSpeedDialog by remember { mutableStateOf(false) }
     var showSleepTimerDialog by remember { mutableStateOf(false) }
     var showLyricsSearchDialog by remember { mutableStateOf(false) }
     var showSaveLyricsDialog by remember { mutableStateOf(false) }
@@ -334,6 +339,38 @@ fun ExpandedPlayerScreen(
                                 Icon(
                                     painter = painterResource(Res.drawable.ic_rounded_speaker),
                                     contentDescription = "Audio Output Device",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(buttonGap))
+
+                        val speedContainerColor = if (playbackSpeed != 1.0f) colors.primary else colors.surfaceContainerHighest
+                        val speedContentColor = if (playbackSpeed != 1.0f) colors.onPrimary else colors.onSurface
+
+                        AppTooltip(
+                            text = if (playbackSpeed != 1.0f) "Speed: ${playbackSpeed}x" else "Playback Speed",
+                            alignment = Alignment.BottomCenter,
+                            offset = DpOffset(0.dp, 6.dp)
+                        ) {
+                            FilledIconButton(
+                                onClick = { showPlaybackSpeedDialog = true },
+                                shape = RoundedCornerShape(
+                                    topStart = innerCorner,
+                                    bottomStart = innerCorner,
+                                    topEnd = innerCorner,
+                                    bottomEnd = innerCorner
+                                ),
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = speedContainerColor,
+                                    contentColor = speedContentColor
+                                ),
+                                modifier = Modifier.size(buttonSize)
+                            ) {
+                                Icon(
+                                    painter = painterResource(Res.drawable.ic_rounded_speed),
+                                    contentDescription = "Playback Speed",
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -859,6 +896,18 @@ fun ExpandedPlayerScreen(
                 onSelectDevice = { viewModel.setSelectedAudioDevice(it) },
                 onRefreshDevices = { viewModel.refreshAudioDevices() },
                 onDismiss = { showAudioDeviceDialog = false }
+            )
+        }
+
+        if (showPlaybackSpeedDialog) {
+            PlaybackSpeedDialog(
+                currentSpeed = playbackSpeed,
+                isSpeedSavedForThisSong = isCurrentSongSpeedSaved,
+                onSpeedChange = { viewModel.setPlaybackSpeed(it, persist = false) },
+                onSpeedChangeFinished = { viewModel.setPlaybackSpeed(it, persist = true) },
+                onResetSpeed = { viewModel.resetPlaybackSpeed() },
+                onRememberSpeedToggle = { viewModel.setRememberSpeedForCurrentSong(it) },
+                onDismiss = { showPlaybackSpeedDialog = false }
             )
         }
 

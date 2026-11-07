@@ -40,6 +40,7 @@ data class UserSettings(
     val lyricsAlignment: String = "left",
     val lyricsTextSize: String = "medium",
     val lyricsSyncOffsets: Map<String, Int> = emptyMap(),
+    val songPlaybackSpeeds: Map<String, Float> = emptyMap(),
     val showLyricsRomanization: Boolean = true,
     val replayGainEnabled: Boolean = false,
     val replayGainMode: String = "track",

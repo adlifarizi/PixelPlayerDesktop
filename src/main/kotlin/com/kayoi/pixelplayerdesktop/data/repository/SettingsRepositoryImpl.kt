@@ -265,6 +265,22 @@ class SettingsRepositoryImpl(
         }
     }
 
+    override suspend fun setSongPlaybackSpeed(songId: String, speed: Float?) {
+        updateSettings { current ->
+            val updatedMap = current.songPlaybackSpeeds.toMutableMap()
+            if (speed == null) {
+                updatedMap.remove(songId)
+            } else {
+                updatedMap[songId] = speed
+            }
+            current.copy(songPlaybackSpeeds = updatedMap)
+        }
+    }
+
+    override suspend fun clearAllSongPlaybackSpeeds() {
+        updateSettings { it.copy(songPlaybackSpeeds = emptyMap()) }
+    }
+
     override suspend fun setShowLyricsRomanization(enabled: Boolean) {
         updateSettings { it.copy(showLyricsRomanization = enabled) }
     }

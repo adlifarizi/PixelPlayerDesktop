@@ -22,6 +22,7 @@ import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_light_mode
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_palette
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_refresh
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_speaker
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_speed
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_tab
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_view_week
 import org.jetbrains.compose.resources.painterResource
@@ -79,6 +80,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -1031,6 +1034,165 @@ fun SettingsCategoryDetail(
                             },
                             shape = queueHistoryShape
                         )
+                    }
+                }
+
+                item {
+                    val savedSpeedsCount by viewModel.savedSongSpeedsCount.collectAsState()
+                    var showClearConfirmDialog by remember { mutableStateOf(false) }
+
+                    SettingsSubsection(title = "PLAYBACK SPEED") {
+                        val windowInfo = LocalWindowInfo.current
+                        val density = LocalDensity.current
+                        val isSmallScreen = with(density) { windowInfo.containerSize.width.toDp() } < 800.dp
+
+                        Surface(
+                            shape = getGroupShape(0, 1),
+                            color = colors.surfaceContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                                val isCompact = isSmallScreen || maxWidth < 640.dp
+
+                                if (isCompact) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                        Row(
+                                            verticalAlignment = Alignment.Top,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.size(24.dp).padding(top = 2.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(Res.drawable.ic_rounded_speed),
+                                                    contentDescription = null,
+                                                    tint = colors.secondary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(16.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Saved Song Speeds",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = colors.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = if (savedSpeedsCount > 0) {
+                                                        "$savedSpeedsCount song${if (savedSpeedsCount > 1) "s" else ""} with custom playback speed"
+                                                    } else {
+                                                        "No individual songs saved with custom speed"
+                                                    },
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = colors.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        if (savedSpeedsCount > 0) {
+                                            FilledTonalButton(
+                                                onClick = { showClearConfirmDialog = true },
+                                                shape = RoundedCornerShape(12.dp),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = ButtonDefaults.filledTonalButtonColors(
+                                                    containerColor = colors.errorContainer,
+                                                    contentColor = colors.onErrorContainer
+                                                )
+                                            ) {
+                                                Text("Clear All")
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f).padding(end = 16.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier.size(24.dp),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    painter = painterResource(Res.drawable.ic_rounded_speed),
+                                                    contentDescription = null,
+                                                    tint = colors.secondary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(16.dp))
+
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Saved Song Speeds",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = colors.onSurface
+                                                )
+                                                Text(
+                                                    text = if (savedSpeedsCount > 0) {
+                                                        "$savedSpeedsCount song${if (savedSpeedsCount > 1) "s" else ""} with custom playback speed"
+                                                    } else {
+                                                        "No individual songs saved with custom speed"
+                                                    },
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = colors.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+
+                                        if (savedSpeedsCount > 0) {
+                                            FilledTonalButton(
+                                                onClick = { showClearConfirmDialog = true },
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = ButtonDefaults.filledTonalButtonColors(
+                                                    containerColor = colors.errorContainer,
+                                                    contentColor = colors.onErrorContainer
+                                                )
+                                            ) {
+                                                Text("Clear All")
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        if (showClearConfirmDialog) {
+                            AlertDialog(
+                                onDismissRequest = { showClearConfirmDialog = false },
+                                title = { Text("Clear All Saved Speeds?") },
+                                text = { Text("This will remove custom playback speeds for all $savedSpeedsCount saved songs and revert them to default.") },
+                                confirmButton = {
+                                    TextButton(
+                                        onClick = {
+                                            viewModel.clearAllSavedSongSpeeds()
+                                            showClearConfirmDialog = false
+                                        }
+                                    ) {
+                                        Text("Clear", color = colors.error)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showClearConfirmDialog = false }) {
+                                        Text("Cancel")
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
 
