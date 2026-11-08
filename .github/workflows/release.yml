@@ -82,13 +82,20 @@ jobs:
 
       - name: Archive Portable Linux Binary
         run: |
+          VERSION="${{ steps.meta.outputs.version }}"
           APP_DIR=$(ls build/compose/binaries/main/app | head -n 1)
-          tar -czf build/compose/binaries/main/pixelplayer-linux-portable.tar.gz -C build/compose/binaries/main/app "$APP_DIR"
+          tar -czf "build/compose/binaries/main/PixelPlayer-v${VERSION}-linux-x64-portable.tar.gz" -C build/compose/binaries/main/app "$APP_DIR"
 
       - name: Stage Linux Artifacts
         run: |
+          VERSION="${{ steps.meta.outputs.version }}"
           mkdir -p dist-linux
-          find build/compose/binaries/main -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.tar.gz" \) -exec cp {} dist-linux/ \;
+          DEB_FILE=$(find build/compose/binaries/main/deb -type f -name "*.deb" | head -n 1)
+          RPM_FILE=$(find build/compose/binaries/main/rpm -type f -name "*.rpm" | head -n 1)
+          PORTABLE_FILE="build/compose/binaries/main/PixelPlayer-v${VERSION}-linux-x64-portable.tar.gz"
+          cp "$DEB_FILE" "dist-linux/PixelPlayer-v${VERSION}-linux-amd64.deb"
+          cp "$RPM_FILE" "dist-linux/PixelPlayer-v${VERSION}-linux-x86_64.rpm"
+          cp "$PORTABLE_FILE" "dist-linux/"
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
@@ -123,15 +130,18 @@ jobs:
       - name: Archive Portable Windows Binary
         shell: pwsh
         run: |
+          $version = "${{ needs.build-linux.outputs.version }}"
           $appDir = (Get-ChildItem -Directory "build\compose\binaries\main\app" | Select-Object -First 1).FullName
-          Compress-Archive -Path "$appDir\*" -DestinationPath "build\compose\binaries\main\pixelplayer-windows-portable.zip"
+          Compress-Archive -Path "$appDir\*" -DestinationPath "build\compose\binaries\main\PixelPlayer-v$version-windows-x64-portable.zip"
 
       - name: Stage Windows Artifacts
         shell: pwsh
         run: |
+          $version = "${{ needs.build-linux.outputs.version }}"
           New-Item -ItemType Directory -Force -Path "dist-windows"
-          Copy-Item "build/compose/binaries/main/exe/*.exe" "dist-windows/"
-          Copy-Item "build/compose/binaries/main/pixelplayer-windows-portable.zip" "dist-windows/"
+          $exeFile = (Get-ChildItem -File "build\compose\binaries\main\exe\*.exe" | Select-Object -First 1).FullName
+          Copy-Item $exeFile "dist-windows\PixelPlayer-v$version-windows-x64-setup.exe"
+          Copy-Item "build\compose\binaries\main\PixelPlayer-v$version-windows-x64-portable.zip" "dist-windows\"
 
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
@@ -182,11 +192,11 @@ jobs:
             rw_dmg="${dmg%.dmg}-rw.dmg"
             hdiutil convert "$dmg" -format UDRW -o "$rw_dmg"
             mount_point=$(mktemp -d /tmp/dmg_mount.XXXXXX)
-            hdiutil attach "$rw_dmg" -mountpoint "$mount_point" -nobrowse -noverify
-            cp "$ICON_SRC" "$mount_point/.VolumeIcon.icns"
-            SetFile -a C "$mount_point"
-            SetFile -a V "$mount_point/.VolumeIcon.icns"
-            hdiutil detach "$mount_point"
+            hdiutil attach "$rw_dmg" -mountpoint "$mount_point" -nobrowse -noverify -readwrite
+            sudo cp "$ICON_SRC" "$mount_point/.VolumeIcon.icns"
+            sudo SetFile -a C "$mount_point"
+            sudo SetFile -a V "$mount_point/.VolumeIcon.icns"
+            hdiutil detach "$mount_point" -force
             hdiutil convert "$rw_dmg" -format UDZO -imagekey zlib-level=9 -o "$dmg" -ov
             rm -f "$rw_dmg"
             rmdir "$mount_point" 2>/dev/null || true
@@ -195,13 +205,17 @@ jobs:
 
       - name: Archive Portable macOS Binary
         run: |
+          VERSION="${{ needs.build-linux.outputs.version }}"
           APP_NAME=$(ls build/compose/binaries/main/app | grep '\.app$' | head -n 1)
-          tar -czf build/compose/binaries/main/pixelplayer-macos-portable.tar.gz -C build/compose/binaries/main/app "$APP_NAME"
+          tar -czf "build/compose/binaries/main/PixelPlayer-v${VERSION}-macos-arm64-portable.tar.gz" -C build/compose/binaries/main/app "$APP_NAME"
 
       - name: Stage macOS Artifacts
         run: |
+          VERSION="${{ needs.build-linux.outputs.version }}"
           mkdir -p dist-macos
-          find build/compose/binaries/main -type f \( -name "*.dmg" -o -name "*macos-portable.tar.gz" \) -exec cp {} dist-macos/ \;
+          DMG_FILE=$(find build/compose/binaries/main -type f -name "*.dmg" | head -n 1)
+          cp "$DMG_FILE" "dist-macos/PixelPlayer-v${VERSION}-macos-arm64.dmg"
+          cp "build/compose/binaries/main/PixelPlayer-v${VERSION}-macos-arm64-portable.tar.gz" dist-macos/
 
       - name: Upload macOS Artifacts
         uses: actions/upload-artifact@v4
