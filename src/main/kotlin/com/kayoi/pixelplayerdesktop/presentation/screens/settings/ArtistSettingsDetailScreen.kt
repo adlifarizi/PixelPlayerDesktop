@@ -36,7 +36,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -62,6 +61,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kayoi.pixelplayerdesktop.data.scanner.ScanProgress
+import com.kayoi.pixelplayerdesktop.presentation.components.ExpressiveCircularProgressIndicator
 import com.kayoi.pixelplayerdesktop.presentation.components.ExpressiveSwitchRow
 import com.kayoi.pixelplayerdesktop.presentation.components.trackInputFocus
 import com.kayoi.pixelplayerdesktop.presentation.viewmodel.PlayerViewModel
@@ -635,7 +635,7 @@ private fun RescanRequiredBanner(
                         modifier = Modifier.fillMaxWidth().height(40.dp)
                     ) {
                         if (isResyncing) {
-                            CircularProgressIndicator(
+                            ExpressiveCircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 color = colors.onTertiary,
                                 strokeWidth = 2.dp
@@ -695,7 +695,7 @@ private fun RescanRequiredBanner(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         if (isResyncing) {
-                            CircularProgressIndicator(
+                            ExpressiveCircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 color = colors.onTertiary,
                                 strokeWidth = 2.dp

@@ -41,7 +41,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -250,7 +249,7 @@ fun MiniPlayerBar(
                                 )
                             ) {
                                 if (isBuffering) {
-                                    CircularProgressIndicator(
+                                    ExpressiveCircularProgressIndicator(
                                         modifier = Modifier.size(20.dp),
                                         color = colors.onPrimary,
                                         strokeWidth = 2.dp
@@ -475,7 +474,7 @@ fun MiniPlayerBar(
                                     )
                                 ) {
                                     if (isBuffering) {
-                                        CircularProgressIndicator(
+                                        ExpressiveCircularProgressIndicator(
                                             modifier = Modifier.size(if (isMedium) 18.dp else 22.dp),
                                             color = colors.onPrimary,
                                             strokeWidth = 2.dp

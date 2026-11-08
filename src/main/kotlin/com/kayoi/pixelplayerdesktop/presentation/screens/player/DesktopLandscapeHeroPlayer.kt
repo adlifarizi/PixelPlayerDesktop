@@ -40,7 +40,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -82,6 +81,7 @@ import com.kayoi.pixelplayerdesktop.data.model.ArtistRef
 import com.kayoi.pixelplayerdesktop.data.model.Song
 import com.kayoi.pixelplayerdesktop.presentation.components.ArtworkSize
 import com.kayoi.pixelplayerdesktop.presentation.components.AsyncArtworkImage
+import com.kayoi.pixelplayerdesktop.presentation.components.ExpressiveCircularProgressIndicator
 import com.kayoi.pixelplayerdesktop.presentation.components.PlaybackCurrentTimeText
 import com.kayoi.pixelplayerdesktop.presentation.components.WavySliderExpressive
 import com.kayoi.pixelplayerdesktop.presentation.components.formatTime
@@ -699,7 +699,7 @@ fun PlaybackControlsRow(
                     contentAlignment = Alignment.Center
                 ) {
                     if (isBuffering) {
-                        CircularProgressIndicator(
+                        ExpressiveCircularProgressIndicator(
                             modifier = Modifier.size(if (buttonHeight < 50.dp) 24.dp else 28.dp),
                             color = colors.onPrimary,
                             strokeWidth = 2.5.dp

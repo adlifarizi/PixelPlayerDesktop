@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +56,7 @@ import com.kayoi.pixelplayerdesktop.data.model.SyncedWord
 import com.kayoi.pixelplayerdesktop.generated.resources.Res
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_lyrics
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
+import com.kayoi.pixelplayerdesktop.presentation.components.ContainedLoadingIndicator
 import com.kayoi.pixelplayerdesktop.presentation.components.LocalWindowMinimized
 import com.kayoi.pixelplayerdesktop.presentation.components.subcomps.BubblesLine
 import com.kayoi.pixelplayerdesktop.utils.MultiLangRomanizer
@@ -101,12 +101,11 @@ fun LyricsView(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(36.dp),
-                    color = colors.primary,
-                    strokeWidth = 3.dp
+                ContainedLoadingIndicator(
+                    containerColor = colors.surfaceContainerHighest.copy(alpha = 0.6f),
+                    indicatorColor = colors.primary
                 )
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = "Loading lyrics...",
                     style = MaterialTheme.typography.bodyMedium,

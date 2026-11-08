@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -633,7 +632,7 @@ fun EditSongMetadataDialog(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         if (isSaving) {
-                            CircularProgressIndicator(
+                            ExpressiveCircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 color = colors.onPrimary,
                                 strokeWidth = 2.dp

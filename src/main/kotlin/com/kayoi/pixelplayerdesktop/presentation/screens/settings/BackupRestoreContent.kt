@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
@@ -465,7 +466,10 @@ fun BackupRestoreContent(
                     )
                     LinearProgressIndicator(
                         progress = { progressUpdate?.progress ?: 0f },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        strokeCap = StrokeCap.Round,
+                        gapSize = 4.dp,
+                        trackColor = colors.surfaceContainerHighest
                     )
                 }
             },

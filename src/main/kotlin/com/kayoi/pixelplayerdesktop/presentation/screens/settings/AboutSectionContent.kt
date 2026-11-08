@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +62,7 @@ import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_balance
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_check_circle
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_chevron_right
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_palette
+import com.kayoi.pixelplayerdesktop.presentation.components.ExpressiveCircularProgressIndicator
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_public
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_refresh
 import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_system_update
@@ -349,7 +349,7 @@ fun AboutSectionContent(
 
                         when (checkResult) {
                             is UpdateCheckResult.Checking -> {
-                                CircularProgressIndicator(
+                                ExpressiveCircularProgressIndicator(
                                     modifier = Modifier.size(20.dp),
                                     strokeWidth = 2.dp,
                                     color = colors.primary

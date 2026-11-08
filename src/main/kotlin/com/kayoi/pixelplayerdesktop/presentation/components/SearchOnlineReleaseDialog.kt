@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -230,9 +229,12 @@ fun SearchOnlineReleaseDialog(
                                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                                        ContainedLoadingIndicator(
+                                            containerColor = colors.surfaceContainerHighest.copy(alpha = 0.6f),
+                                            indicatorColor = colors.primary
+                                        )
                                         Text(
                                             text = "Searching MusicBrainz...",
                                             style = MaterialTheme.typography.labelMedium,
@@ -369,7 +371,7 @@ fun SearchOnlineReleaseDialog(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     when {
-                                        isLoadingCoverArt -> CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        isLoadingCoverArt -> ExpressiveLoadingIndicator(size = 32.dp)
                                         isCoverArtFailed -> {
                                             Column(
                                                 horizontalAlignment = Alignment.CenterHorizontally,

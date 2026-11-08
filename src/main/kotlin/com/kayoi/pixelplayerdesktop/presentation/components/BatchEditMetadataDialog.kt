@@ -37,7 +37,6 @@ import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
@@ -67,6 +66,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
@@ -980,7 +980,10 @@ fun BatchEditMetadataDialog(
                     ) {
                         LinearProgressIndicator(
                             progress = { progressRatio },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            strokeCap = StrokeCap.Round,
+                            gapSize = 4.dp,
+                            trackColor = colors.surfaceContainerHighest
                         )
                         Text(
                             text = "Saving tag $savedProgress of ${songs.size}...",
@@ -1060,7 +1063,7 @@ fun BatchEditMetadataDialog(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         if (isSaving) {
-                            CircularProgressIndicator(
+                            ExpressiveCircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
                                 color = colors.onPrimary,
                                 strokeWidth = 2.dp

@@ -26,7 +26,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -185,9 +184,12 @@ fun LyricsSearchDialog(
                         is LyricsSearchUiState.Loading -> {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                CircularProgressIndicator(color = colors.primary)
+                                ContainedLoadingIndicator(
+                                    containerColor = colors.surfaceContainerHighest.copy(alpha = 0.6f),
+                                    indicatorColor = colors.primary
+                                )
                                 Text(
                                     text = "Searching online...",
                                     style = MaterialTheme.typography.bodyMedium,

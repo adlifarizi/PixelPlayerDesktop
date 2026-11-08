@@ -36,7 +36,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -69,6 +69,7 @@ import com.kayoi.pixelplayerdesktop.domain.repository.JellyfinRepository
 import com.kayoi.pixelplayerdesktop.domain.repository.ListenBrainzRepository
 import com.kayoi.pixelplayerdesktop.domain.repository.NavidromeRepository
 import com.kayoi.pixelplayerdesktop.domain.repository.SettingsRepository
+import com.kayoi.pixelplayerdesktop.presentation.components.ExpressiveCircularProgressIndicator
 import com.kayoi.pixelplayerdesktop.presentation.components.TrackDialogInput
 import com.kayoi.pixelplayerdesktop.presentation.components.trackInputFocus
 import com.kayoi.pixelplayerdesktop.presentation.viewmodel.PlaybackStateHolder
@@ -413,7 +414,10 @@ private fun ServerAccountCard(
                     Column(modifier = Modifier.padding(top = 16.dp)) {
                         LinearProgressIndicator(
                             progress = { syncProgress.first },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape)
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                            strokeCap = StrokeCap.Round,
+                            gapSize = 4.dp,
+                            trackColor = colors.surfaceContainerHighest
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -450,7 +454,7 @@ private fun ServerActionButtons(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     if (syncProgress != null) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        ExpressiveCircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
                         Icon(painter = painterResource(Res.drawable.ic_rounded_sync), contentDescription = null, modifier = Modifier.size(16.dp))
                     }
@@ -483,7 +487,7 @@ private fun ServerActionButtons(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 if (syncProgress != null) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    ExpressiveCircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                 } else {
                     Icon(painter = painterResource(Res.drawable.ic_rounded_sync), contentDescription = null, modifier = Modifier.size(16.dp))
                 }
@@ -939,7 +943,7 @@ private fun NavidromeLoginDialog(
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    ExpressiveCircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
                     Text("Connect")
                 }
@@ -1051,7 +1055,7 @@ private fun JellyfinLoginDialog(
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    ExpressiveCircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
                     Text("Connect")
                 }
@@ -1152,7 +1156,7 @@ private fun ListenBrainzLoginDialog(
                 enabled = !isLoading
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    ExpressiveCircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
                     Text("Connect")
                 }

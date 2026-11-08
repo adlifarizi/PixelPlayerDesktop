@@ -80,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
@@ -403,11 +404,17 @@ fun SettingsCategoryDetail(
                                     if (progress.totalDiscovered > 0) {
                                         LinearProgressIndicator(
                                             progress = { progress.scannedCount.toFloat() / progress.totalDiscovered.coerceAtLeast(1) },
-                                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                            strokeCap = StrokeCap.Round,
+                                            gapSize = 4.dp,
+                                            trackColor = colors.surfaceContainerHighest
                                         )
                                     } else {
                                         LinearProgressIndicator(
-                                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp))
+                                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                            strokeCap = StrokeCap.Round,
+                                            gapSize = 4.dp,
+                                            trackColor = colors.surfaceContainerHighest
                                         )
                                     }
                                     Text(
