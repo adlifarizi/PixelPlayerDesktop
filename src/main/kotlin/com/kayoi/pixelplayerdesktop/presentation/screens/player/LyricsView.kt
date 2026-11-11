@@ -503,26 +503,15 @@ private fun LyricWordSpan(
         else -> inactiveColor
     }
 
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = word.word,
-            fontSize = fontSize,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color.Transparent
-        )
-        Text(
-            text = word.word,
-            fontSize = fontSize,
-            fontWeight = if (isHighlighted) FontWeight.ExtraBold else FontWeight.Medium,
-            color = textColor,
-            modifier = Modifier.graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-                transformOrigin = TransformOrigin(0.5f, 0.5f)
-            }
-        )
-    }
+    Text(
+        text = word.word,
+        fontSize = fontSize,
+        fontWeight = FontWeight.ExtraBold,
+        color = textColor,
+        modifier = modifier.graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            transformOrigin = TransformOrigin(0.5f, 0.5f)
+        }
+    )
 }
