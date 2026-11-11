@@ -389,7 +389,9 @@ class PlaybackStateHolder(
         }
 
         coroutineScope.launch {
-            queueManager.currentSong.collectLatest { song ->
+            queueManager.currentSong
+                .distinctUntilChanged { old, new -> old?.id == new?.id }
+                .collectLatest { song ->
                 val activeTimer = sleepTimerSession.timer.value
                 if (activeTimer is SleepTimerSession.Timer.EndOfTrack && activeTimer.songId != song?.id) {
                     sleepTimerSession.setTimer(null)

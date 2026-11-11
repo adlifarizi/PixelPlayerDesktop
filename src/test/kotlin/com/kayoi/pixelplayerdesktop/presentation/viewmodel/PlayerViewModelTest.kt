@@ -16,6 +16,7 @@ import com.kayoi.pixelplayerdesktop.data.database.LocalPlaylistDao
 import com.kayoi.pixelplayerdesktop.data.database.LyricsDao
 import com.kayoi.pixelplayerdesktop.data.database.MusicDao
 import com.kayoi.pixelplayerdesktop.data.database.PixelPlayerDatabase
+import com.kayoi.pixelplayerdesktop.data.model.Lyrics
 import com.kayoi.pixelplayerdesktop.data.model.Song
 import com.kayoi.pixelplayerdesktop.data.player.QueueManager
 import com.kayoi.pixelplayerdesktop.data.player.mpv.MpvAudioEngine
@@ -141,5 +142,57 @@ class PlayerViewModelTest {
         assertEquals(1.0f, viewModel.playbackSpeed.value)
         assertFalse(viewModel.isCurrentSongSpeedSaved.value)
         assertEquals(0, viewModel.savedSongSpeedsCount.value)
+    }
+
+    @Test
+    fun testToggleFavoriteDoesNotReloadLyrics() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+
+        val tempDb = File.createTempFile("test_vm_fav_db", ".db")
+        tempDb.deleteOnExit()
+        val tempSettings = File.createTempFile("test_vm_fav_settings", ".json")
+        tempSettings.deleteOnExit()
+
+        val db = PixelPlayerDatabase(tempDb)
+        val musicDao = MusicDao(db, ioDispatcher = testDispatcher)
+        val favDao = FavoritesDao(db, ioDispatcher = testDispatcher)
+        val playlistDao = LocalPlaylistDao(db, ioDispatcher = testDispatcher)
+        val lyricsDao = LyricsDao(db, ioDispatcher = testDispatcher)
+
+        val musicRepo = MusicRepositoryImpl(db, musicDao, favDao, playlistDao, ioDispatcher = testDispatcher)
+        val settingsRepo = SettingsRepositoryImpl(settingsFile = tempSettings, ioDispatcher = testDispatcher)
+        val lyricsRepo = LyricsRepositoryImpl(lyricsDao, settingsRepository = settingsRepo, ioDispatcher = testDispatcher)
+        val scanner = DesktopMusicScanner(musicDao, ioDispatcher = testDispatcher)
+
+        val audioEngine = MpvAudioEngine(coroutineScope = backgroundScope)
+        val queueManager = QueueManager()
+
+        val testScope = CoroutineScope(backgroundScope.coroutineContext + testDispatcher)
+        val playbackStateHolder = PlaybackStateHolder(audioEngine, queueManager, musicRepo, lyricsRepo, settingsRepo, coroutineScope = testScope)
+        val libraryStateHolder = LibraryStateHolder(musicRepo, settingsRepo, scanner, coroutineScope = backgroundScope)
+        val themeStateHolder = ThemeStateHolder(settingsRepo, coroutineScope = backgroundScope)
+        val statsStateHolder = StatsStateHolder(musicRepo, coroutineScope = backgroundScope)
+
+        val viewModel = PlayerViewModel(playbackStateHolder, libraryStateHolder, themeStateHolder, statsStateHolder)
+
+        val song = Song(id = "s1", title = "Song 1", artist = "Artist", path = "/tmp/song1.mp3", duration = 100000L)
+        musicDao.upsertSongs(listOf(song))
+        val initialLyrics = Lyrics(plain = listOf("Line 1", "Line 2"))
+        lyricsRepo.saveLyrics("s1", initialLyrics)
+
+        viewModel.playSong(song)
+        testScheduler.advanceUntilIdle()
+
+        assertEquals("Song 1", viewModel.currentSong.value?.title)
+        assertEquals(initialLyrics, viewModel.playerInfo.value.lyrics)
+        assertFalse(viewModel.playerInfo.value.isLoadingLyrics)
+        assertFalse(viewModel.playerInfo.value.isFavorite)
+
+        viewModel.toggleFavoriteCurrentSong()
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(viewModel.playerInfo.value.isFavorite)
+        assertEquals(initialLyrics, viewModel.playerInfo.value.lyrics)
+        assertFalse(viewModel.playerInfo.value.isLoadingLyrics)
     }
 }
