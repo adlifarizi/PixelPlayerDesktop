@@ -1,11 +1,7 @@
 package com.kayoi.pixelplayerdesktop.presentation.components
 
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_lyrics
-import com.kayoi.pixelplayerdesktop.generated.resources.Res
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_outlined_file_open
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_close
-import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
-import org.jetbrains.compose.resources.painterResource
+import java.io.File
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -45,16 +41,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.painterResource
+
 import com.kayoi.pixelplayerdesktop.data.model.Lyrics
 import com.kayoi.pixelplayerdesktop.data.model.Song
+import com.kayoi.pixelplayerdesktop.generated.resources.Res
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_lyrics
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_outlined_file_open
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_close
+import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_search
 import com.kayoi.pixelplayerdesktop.presentation.viewmodel.LyricsSearchUiState
 import com.kayoi.pixelplayerdesktop.utils.DirectoryPicker
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,9 +149,27 @@ fun LyricsSearchDialog(
                         placeholder = { Text("Song title or artist...") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { onSearch(searchQuery) }),
+                        keyboardActions = KeyboardActions(onSearch = {
+                            if (searchQuery.isNotBlank() && uiState !is LyricsSearchUiState.Loading) {
+                                onSearch(searchQuery)
+                            }
+                        }),
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f).trackInputFocus(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .trackInputFocus()
+                            .onPreviewKeyEvent { event ->
+                                if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
+                                    if (searchQuery.isNotBlank() && uiState !is LyricsSearchUiState.Loading) {
+                                        onSearch(searchQuery)
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedContainerColor = colors.surfaceContainer,
                             unfocusedContainerColor = colors.surfaceContainer,
