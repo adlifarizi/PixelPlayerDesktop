@@ -306,6 +306,8 @@ class PlayerViewModel(
         libraryStateHolder.exportPlaylistToM3u(playlistId, targetFile, onComplete)
     fun toggleFavorite(song: Song) = playbackStateHolder.toggleFavorite(song)
     val quickAccessItems = libraryStateHolder.quickAccessItems
+    val showQuickAccessLimitDialog = libraryStateHolder.showQuickAccessLimitDialog
+    fun dismissQuickAccessLimitDialog() = libraryStateHolder.dismissQuickAccessLimitDialog()
     fun pinToQuickAccess(item: QuickAccessItem, onResult: ((Boolean) -> Unit)? = null) =
         libraryStateHolder.pinToQuickAccess(item, onResult)
     fun unpinFromQuickAccess(id: String) = libraryStateHolder.unpinFromQuickAccess(id)

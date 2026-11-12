@@ -148,6 +148,13 @@ class LibraryStateHolder(
         .map { it.quickAccessItems }
         .stateIn(coroutineScope, SharingStarted.Eagerly, QuickAccessItem.DEFAULT_ITEMS)
 
+    private val _showQuickAccessLimitDialog = MutableStateFlow(false)
+    val showQuickAccessLimitDialog: StateFlow<Boolean> = _showQuickAccessLimitDialog.asStateFlow()
+
+    fun dismissQuickAccessLimitDialog() {
+        _showQuickAccessLimitDialog.value = false
+    }
+
     val rescanRequired: StateFlow<Boolean> = settingsRepository.settingsFlow
         .map { it.artistSettingsRescanRequired }
         .stateIn(coroutineScope, SharingStarted.Eagerly, false)
@@ -710,6 +717,9 @@ class LibraryStateHolder(
     fun pinToQuickAccess(item: QuickAccessItem, onResult: ((Boolean) -> Unit)? = null) {
         coroutineScope.launch {
             val success = settingsRepository.pinToQuickAccess(item)
+            if (!success) {
+                _showQuickAccessLimitDialog.value = true
+            }
             onResult?.invoke(success)
         }
     }

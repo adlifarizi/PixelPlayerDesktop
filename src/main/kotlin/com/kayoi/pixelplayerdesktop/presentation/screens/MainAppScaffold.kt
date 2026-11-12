@@ -52,6 +52,7 @@ import com.kayoi.pixelplayerdesktop.presentation.components.EditSongMetadataDial
 import com.kayoi.pixelplayerdesktop.presentation.components.KeyboardShortcutsDialog
 import com.kayoi.pixelplayerdesktop.presentation.components.MiniPlayerBar
 import com.kayoi.pixelplayerdesktop.presentation.components.QueueSidePanel
+import com.kayoi.pixelplayerdesktop.presentation.components.QuickAccessLimitDialog
 import com.kayoi.pixelplayerdesktop.presentation.components.QuickAccessSettingsDialog
 import com.kayoi.pixelplayerdesktop.presentation.navigation.DesktopBackDispatcher
 import com.kayoi.pixelplayerdesktop.presentation.navigation.DesktopBackHandler
@@ -115,6 +116,7 @@ fun MainAppScaffold(
     val storageFilter by viewModel.storageFilter.collectAsState()
     val showShortcutsDialog by viewModel.showShortcutsDialog.collectAsState()
     val quickAccessItems by viewModel.quickAccessItems.collectAsState()
+    val showQuickAccessLimitDialog by viewModel.showQuickAccessLimitDialog.collectAsState()
     val fetchDeezerImages by viewModel.fetchDeezerArtistImages.collectAsState()
     var showQuickAccessSettingsDialog by remember { mutableStateOf(false) }
     val showUpdateDialog = viewModel.updateStateHolder?.showUpdateDialog?.collectAsState()?.value ?: false
@@ -215,6 +217,10 @@ fun MainAppScaffold(
         viewModel.hideShortcutsDialog()
         true
     }
+    DesktopBackHandler(enabled = showQuickAccessLimitDialog, dispatcher = backDispatcher) {
+        viewModel.dismissQuickAccessLimitDialog()
+        true
+    }
     DesktopBackHandler(enabled = isExpandedPlayerOpen, dispatcher = backDispatcher) {
         isExpandedPlayerOpen = false
         true
@@ -298,7 +304,7 @@ fun MainAppScaffold(
                     onToggleQueue = onToggleQueueSidePanel,
                     searchFocusRequester = searchFocusRequester,
                     onSearchFocusChange = onSearchFocusChange,
-                    canGoBack = nav.canGoBack || isExpandedPlayerOpen || isCompactQueueMode || songToAddToPlaylist != null || songToDelete != null || songToEditMetadata != null || batchSongsToEdit != null,
+                    canGoBack = nav.canGoBack || isExpandedPlayerOpen || isCompactQueueMode || songToAddToPlaylist != null || songToDelete != null || songToEditMetadata != null || batchSongsToEdit != null || showShortcutsDialog || showQuickAccessLimitDialog,
                     canGoForward = nav.canGoForward && !isExpandedPlayerOpen,
                     onGoBack = { backDispatcher.dispatchBack() },
                     onGoForward = { backDispatcher.dispatchForward() }
@@ -849,6 +855,16 @@ fun MainAppScaffold(
                     }
                 )
             }
+        }
+
+        if (showQuickAccessLimitDialog) {
+            QuickAccessLimitDialog(
+                onDismiss = { viewModel.dismissQuickAccessLimitDialog() },
+                onManageQuickAccess = {
+                    viewModel.dismissQuickAccessLimitDialog()
+                    showQuickAccessSettingsDialog = true
+                }
+            )
         }
 
         if (showQuickAccessSettingsDialog) {

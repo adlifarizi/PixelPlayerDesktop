@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -235,5 +236,63 @@ class LibraryStateHolderTest {
         val realItem = updated.find { it.id == "playlist_${pl.id}" }
         assertNotNull(realItem)
         assertEquals("Real Playlist", realItem?.title)
+    }
+
+    @Test
+    fun `pinToQuickAccess triggers showQuickAccessLimitDialog when limit reached`() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+
+        val tempDb = File.createTempFile("test_qa_limit_db", ".db")
+        tempDb.deleteOnExit()
+        val tempSettings = File.createTempFile("test_qa_limit_settings", ".json")
+        tempSettings.deleteOnExit()
+
+        val db = PixelPlayerDatabase(tempDb)
+        val musicDao = MusicDao(db, ioDispatcher = testDispatcher)
+        val favDao = FavoritesDao(db, ioDispatcher = testDispatcher)
+        val playlistDao = LocalPlaylistDao(db, ioDispatcher = testDispatcher)
+
+        val musicRepo = MusicRepositoryImpl(db, musicDao, favDao, playlistDao, ioDispatcher = testDispatcher)
+        val settingsRepo = SettingsRepositoryImpl(settingsFile = tempSettings, ioDispatcher = testDispatcher)
+        val scanner = DesktopMusicScanner(musicDao, ioDispatcher = testDispatcher)
+
+        val libraryStateHolder = LibraryStateHolder(
+            musicRepository = musicRepo,
+            settingsRepository = settingsRepo,
+            scanner = scanner,
+            coroutineScope = backgroundScope
+        )
+
+        for (i in 1..QuickAccessItem.MAX_PINNED_CUSTOM_ITEMS) {
+            settingsRepo.pinToQuickAccess(
+                QuickAccessItem(
+                    id = "album_$i",
+                    title = "Album $i",
+                    type = QuickAccessType.ALBUM,
+                    targetKey = "$i"
+                )
+            )
+        }
+        testScheduler.advanceUntilIdle()
+        assertFalse(libraryStateHolder.showQuickAccessLimitDialog.value)
+
+        assertFalse(libraryStateHolder.showQuickAccessLimitDialog.value)
+
+        libraryStateHolder.pinToQuickAccess(
+            QuickAccessItem(
+                id = "album_11",
+                title = "Album 11",
+                type = QuickAccessType.ALBUM,
+                targetKey = "11"
+            )
+        )
+        val showDialog = libraryStateHolder.showQuickAccessLimitDialog.first { it }
+        assertTrue(showDialog)
+
+        libraryStateHolder.dismissQuickAccessLimitDialog()
+        assertFalse(libraryStateHolder.showQuickAccessLimitDialog.value)
+
+        libraryStateHolder.dismissQuickAccessLimitDialog()
+        assertFalse(libraryStateHolder.showQuickAccessLimitDialog.value)
     }
 }
