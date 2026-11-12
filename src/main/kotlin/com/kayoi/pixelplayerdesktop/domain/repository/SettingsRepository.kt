@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 import com.kayoi.pixelplayerdesktop.data.model.EqualizerPreset
 import com.kayoi.pixelplayerdesktop.data.model.QuickAccessItem
+import com.kayoi.pixelplayerdesktop.data.model.QuickAccessType
 import com.kayoi.pixelplayerdesktop.data.preferences.AlbumArtPaletteStyle
 import com.kayoi.pixelplayerdesktop.data.preferences.LyricsSourcePreference
 import com.kayoi.pixelplayerdesktop.data.preferences.UserSettings
@@ -77,4 +78,5 @@ interface SettingsRepository {
     suspend fun setQuickAccessItems(items: List<QuickAccessItem>)
     suspend fun pinToQuickAccess(item: QuickAccessItem): Boolean
     suspend fun unpinFromQuickAccess(id: String)
+    suspend fun syncQuickAccessItemTitle(type: QuickAccessType, targetKey: String, newTitle: String)
 }

@@ -854,6 +854,9 @@ fun MainAppScaffold(
         if (showQuickAccessSettingsDialog) {
             QuickAccessSettingsDialog(
                 items = quickAccessItems,
+                playlists = playlists,
+                albums = albums,
+                artists = artists,
                 onDismiss = { showQuickAccessSettingsDialog = false },
                 onSave = { updatedItems ->
                     viewModel.setQuickAccessItems(updatedItems)

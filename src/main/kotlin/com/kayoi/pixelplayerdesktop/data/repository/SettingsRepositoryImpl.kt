@@ -443,6 +443,24 @@ class SettingsRepositoryImpl(
         }
     }
 
+    override suspend fun syncQuickAccessItemTitle(type: QuickAccessType, targetKey: String, newTitle: String) {
+        updateSettings { current ->
+            if (current.quickAccessItems.none { it.type == type && it.targetKey == targetKey && it.title != newTitle }) {
+                current
+            } else {
+                current.copy(
+                    quickAccessItems = current.quickAccessItems.map { itm ->
+                        if (itm.type == type && itm.targetKey == targetKey) {
+                            itm.copy(title = newTitle)
+                        } else {
+                            itm
+                        }
+                    }
+                )
+            }
+        }
+    }
+
     private fun loadSettingsFromDisk(): UserSettings {
         return try {
             if (settingsFile.exists()) {

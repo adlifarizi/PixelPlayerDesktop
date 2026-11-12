@@ -46,6 +46,9 @@ import org.jetbrains.compose.resources.painterResource
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
+import com.kayoi.pixelplayerdesktop.data.model.Album
+import com.kayoi.pixelplayerdesktop.data.model.Artist
+import com.kayoi.pixelplayerdesktop.data.model.Playlist
 import com.kayoi.pixelplayerdesktop.data.model.QuickAccessItem
 import com.kayoi.pixelplayerdesktop.data.model.QuickAccessType
 import com.kayoi.pixelplayerdesktop.generated.resources.Res
@@ -63,11 +66,32 @@ import com.kayoi.pixelplayerdesktop.generated.resources.ic_rounded_history
 @Composable
 fun QuickAccessSettingsDialog(
     items: List<QuickAccessItem>,
+    playlists: List<Playlist> = emptyList(),
+    albums: List<Album> = emptyList(),
+    artists: List<Artist> = emptyList(),
     onDismiss: () -> Unit,
     onSave: (List<QuickAccessItem>) -> Unit
 ) {
-    var workingList by remember(items) {
-        mutableStateOf(items.sortedBy { it.order })
+    var workingList by remember(items, playlists, albums, artists) {
+        val syncedList = items
+            .filter { item ->
+                when (item.type) {
+                    QuickAccessType.PLAYLIST -> playlists.isEmpty() || playlists.any { it.id == item.targetKey }
+                    QuickAccessType.ALBUM -> albums.isEmpty() || albums.any { it.id.toString() == item.targetKey }
+                    QuickAccessType.ARTIST -> artists.isEmpty() || artists.any { it.id.toString() == item.targetKey }
+                    QuickAccessType.SMART_PRESET -> true
+                }
+            }
+            .map { item ->
+                val resolvedTitle = when (item.type) {
+                    QuickAccessType.PLAYLIST -> playlists.find { it.id == item.targetKey }?.name ?: item.title
+                    QuickAccessType.ALBUM -> albums.find { it.id.toString() == item.targetKey }?.title ?: item.title
+                    QuickAccessType.ARTIST -> artists.find { it.id.toString() == item.targetKey }?.name ?: item.title
+                    QuickAccessType.SMART_PRESET -> item.title
+                }
+                if (resolvedTitle != item.title) item.copy(title = resolvedTitle) else item
+            }
+        mutableStateOf(syncedList.sortedBy { it.order })
     }
     val colors = MaterialTheme.colorScheme
     val listState = rememberLazyListState()

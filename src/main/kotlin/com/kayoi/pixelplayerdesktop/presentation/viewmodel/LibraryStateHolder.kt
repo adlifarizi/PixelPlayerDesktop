@@ -57,6 +57,9 @@ class LibraryStateHolder(
 
     init {
         watcherService?.start()
+        coroutineScope.launch {
+            sanitizeQuickAccessItems()
+        }
     }
 
     private val _storageFilter = MutableStateFlow(StorageFilter.ALL)
@@ -414,6 +417,7 @@ class LibraryStateHolder(
                 settingsRepository.clearArtistSettingsRescanRequired()
             }
             AlbumArtCacheManager.cleanCacheIfNeeded(settings.albumArtCacheLimitMb.toLong())
+            sanitizeQuickAccessItems()
         }
     }
 
@@ -560,6 +564,7 @@ class LibraryStateHolder(
         coroutineScope.launch {
             musicRepository.deletePlaylist(id)
             settingsRepository.unpinFromQuickAccess("playlist_$id")
+            sanitizeQuickAccessItems()
         }
     }
 
@@ -605,12 +610,14 @@ class LibraryStateHolder(
         coroutineScope.launch {
             val existing = musicRepository.getPlaylistById(id) ?: return@launch
             musicRepository.updatePlaylist(existing.copy(name = newName))
+            settingsRepository.syncQuickAccessItemTitle(QuickAccessType.PLAYLIST, id, newName)
         }
     }
 
     fun updatePlaylist(playlist: Playlist) {
         coroutineScope.launch {
             musicRepository.updatePlaylist(playlist)
+            settingsRepository.syncQuickAccessItemTitle(QuickAccessType.PLAYLIST, playlist.id, playlist.name)
         }
     }
 
@@ -646,6 +653,9 @@ class LibraryStateHolder(
             extractArtistFromTitle = extractArtistFromTitle.value
         )
         if (result.success && result.updatedSong != null) {
+            coroutineScope.launch {
+                sanitizeQuickAccessItems()
+            }
             if (_searchQuery.value.isNotBlank()) {
                 onSearchQueryChanged(_searchQuery.value)
             }
@@ -670,8 +680,13 @@ class LibraryStateHolder(
             extractArtistFromTitle = extractArtistFromTitle.value,
             onProgress = onProgress
         )
-        if (result.successCount > 0 && _searchQuery.value.isNotBlank()) {
-            onSearchQueryChanged(_searchQuery.value)
+        if (result.successCount > 0) {
+            coroutineScope.launch {
+                sanitizeQuickAccessItems()
+            }
+            if (_searchQuery.value.isNotBlank()) {
+                onSearchQueryChanged(_searchQuery.value)
+            }
         }
         return result
     }
@@ -732,6 +747,70 @@ class LibraryStateHolder(
                 ),
                 onResult = onResult
             )
+        }
+    }
+
+    suspend fun sanitizeQuickAccessItems() {
+        val currentItems = settingsRepository.getSettings().quickAccessItems
+        val hasCustomItems = currentItems.any { it.type != QuickAccessType.SMART_PRESET }
+        if (!hasCustomItems) return
+
+        val hasSongs = musicRepository.hasSongs()
+
+        var changed = false
+        val sanitized = currentItems.mapNotNull { item ->
+            when (item.type) {
+                QuickAccessType.PLAYLIST -> {
+                    val pl = musicRepository.getPlaylistById(item.targetKey)
+                    if (pl == null) {
+                        changed = true
+                        null
+                    } else if (pl.name != item.title) {
+                        changed = true
+                        item.copy(title = pl.name)
+                    } else {
+                        item
+                    }
+                }
+                QuickAccessType.ALBUM -> {
+                    val albumId = item.targetKey.toLongOrNull()
+                    val album = if (albumId != null) musicRepository.getAlbumById(albumId) else null
+                    if (album == null) {
+                        if (hasSongs) {
+                            changed = true
+                            null
+                        } else {
+                            item
+                        }
+                    } else if (album.title != item.title) {
+                        changed = true
+                        item.copy(title = album.title)
+                    } else {
+                        item
+                    }
+                }
+                QuickAccessType.ARTIST -> {
+                    val artistId = item.targetKey.toLongOrNull()
+                    val artist = if (artistId != null) musicRepository.getArtistById(artistId) else null
+                    if (artist == null) {
+                        if (hasSongs) {
+                            changed = true
+                            null
+                        } else {
+                            item
+                        }
+                    } else if (artist.name != item.title) {
+                        changed = true
+                        item.copy(title = artist.name)
+                    } else {
+                        item
+                    }
+                }
+                QuickAccessType.SMART_PRESET -> item
+            }
+        }
+        if (changed) {
+            settingsRepository.setQuickAccessItems(sanitized.mapIndexed { idx, itm -> itm.copy(order = idx) })
         }
     }
 }

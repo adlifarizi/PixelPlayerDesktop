@@ -161,14 +161,15 @@ fun AppSidebar(
 
             val navScrollState = rememberScrollState()
 
-            val enabledQuickAccess = remember(quickAccessItems, playlists) {
+            val enabledQuickAccess = remember(quickAccessItems, playlists, albums, artists) {
                 quickAccessItems
                     .filter { it.isEnabled }
                     .filter { item ->
-                        if (item.type == QuickAccessType.PLAYLIST) {
-                            playlists.isEmpty() || playlists.any { it.id == item.targetKey }
-                        } else {
-                            true
+                        when (item.type) {
+                            QuickAccessType.PLAYLIST -> playlists.isEmpty() || playlists.any { it.id == item.targetKey }
+                            QuickAccessType.ALBUM -> albums.isEmpty() || albums.any { it.id.toString() == item.targetKey }
+                            QuickAccessType.ARTIST -> artists.isEmpty() || artists.any { it.id.toString() == item.targetKey }
+                            QuickAccessType.SMART_PRESET -> true
                         }
                     }
                     .sortedBy { it.order }
@@ -355,10 +356,11 @@ fun AppSidebar(
                                         QuickAccessType.PLAYLIST -> matchedPlaylist?.coverImageUri
                                         QuickAccessType.SMART_PRESET -> null
                                     }
-                                    val displayTitle = if (item.type == QuickAccessType.PLAYLIST) {
-                                        matchedPlaylist?.name ?: item.title
-                                    } else {
-                                        item.title
+                                    val displayTitle = when (item.type) {
+                                        QuickAccessType.PLAYLIST -> matchedPlaylist?.name ?: item.title
+                                        QuickAccessType.ALBUM -> albums.find { it.id.toString() == item.targetKey }?.title ?: item.title
+                                        QuickAccessType.ARTIST -> artists.find { it.id.toString() == item.targetKey }?.name ?: item.title
+                                        QuickAccessType.SMART_PRESET -> item.title
                                     }
 
                                     QuickAccessSidebarNavItem(

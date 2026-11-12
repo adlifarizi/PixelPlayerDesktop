@@ -137,4 +137,103 @@ class LibraryStateHolderTest {
         assertEquals(3, updatedSettings.quickAccessItems.size)
         assertTrue(updatedSettings.quickAccessItems.none { it.id == "playlist_${pl.id}" })
     }
+
+    @Test
+    fun `renamePlaylist updates quick access item title`() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+
+        val tempDb = File.createTempFile("test_rename_pl_db", ".db")
+        tempDb.deleteOnExit()
+        val tempSettings = File.createTempFile("test_rename_pl_settings", ".json")
+        tempSettings.deleteOnExit()
+
+        val db = PixelPlayerDatabase(tempDb)
+        val musicDao = MusicDao(db, ioDispatcher = testDispatcher)
+        val favDao = FavoritesDao(db, ioDispatcher = testDispatcher)
+        val playlistDao = LocalPlaylistDao(db, ioDispatcher = testDispatcher)
+
+        val musicRepo = MusicRepositoryImpl(db, musicDao, favDao, playlistDao, ioDispatcher = testDispatcher)
+        val settingsRepo = SettingsRepositoryImpl(settingsFile = tempSettings, ioDispatcher = testDispatcher)
+        val scanner = DesktopMusicScanner(musicDao, ioDispatcher = testDispatcher)
+
+        val pl = musicRepo.createPlaylist("Old Name", emptyList())
+
+        settingsRepo.pinToQuickAccess(
+            QuickAccessItem(
+                id = "playlist_${pl.id}",
+                title = pl.name,
+                type = QuickAccessType.PLAYLIST,
+                targetKey = pl.id
+            )
+        )
+
+        val libraryStateHolder = LibraryStateHolder(
+            musicRepository = musicRepo,
+            settingsRepository = settingsRepo,
+            scanner = scanner,
+            coroutineScope = backgroundScope
+        )
+
+        libraryStateHolder.renamePlaylist(pl.id, "New Name")
+
+        val updatedSettings = settingsRepo.settingsFlow.first {
+            it.quickAccessItems.any { item -> item.id == "playlist_${pl.id}" && item.title == "New Name" }
+        }
+        val item = updatedSettings.quickAccessItems.find { it.id == "playlist_${pl.id}" }
+        assertNotNull(item)
+        assertEquals("New Name", item?.title)
+    }
+
+    @Test
+    fun `sanitizeQuickAccessItems prunes deleted playlist and updates renamed playlist`() = runTest {
+        val testDispatcher = UnconfinedTestDispatcher(testScheduler)
+
+        val tempDb = File.createTempFile("test_sanitize_pl_db", ".db")
+        tempDb.deleteOnExit()
+        val tempSettings = File.createTempFile("test_sanitize_pl_settings", ".json")
+        tempSettings.deleteOnExit()
+
+        val db = PixelPlayerDatabase(tempDb)
+        val musicDao = MusicDao(db, ioDispatcher = testDispatcher)
+        val favDao = FavoritesDao(db, ioDispatcher = testDispatcher)
+        val playlistDao = LocalPlaylistDao(db, ioDispatcher = testDispatcher)
+
+        val musicRepo = MusicRepositoryImpl(db, musicDao, favDao, playlistDao, ioDispatcher = testDispatcher)
+        val settingsRepo = SettingsRepositoryImpl(settingsFile = tempSettings, ioDispatcher = testDispatcher)
+        val scanner = DesktopMusicScanner(musicDao, ioDispatcher = testDispatcher)
+
+        val pl = musicRepo.createPlaylist("Real Playlist", emptyList())
+
+        settingsRepo.pinToQuickAccess(
+            QuickAccessItem(
+                id = "playlist_${pl.id}",
+                title = "Stale Name",
+                type = QuickAccessType.PLAYLIST,
+                targetKey = pl.id
+            )
+        )
+        settingsRepo.pinToQuickAccess(
+            QuickAccessItem(
+                id = "playlist_deleted_123",
+                title = "Deleted Playlist",
+                type = QuickAccessType.PLAYLIST,
+                targetKey = "deleted_123"
+            )
+        )
+
+        val libraryStateHolder = LibraryStateHolder(
+            musicRepository = musicRepo,
+            settingsRepository = settingsRepo,
+            scanner = scanner,
+            coroutineScope = backgroundScope
+        )
+
+        libraryStateHolder.sanitizeQuickAccessItems()
+
+        val updated = settingsRepo.getSettings().quickAccessItems
+        assertTrue(updated.none { it.id == "playlist_deleted_123" })
+        val realItem = updated.find { it.id == "playlist_${pl.id}" }
+        assertNotNull(realItem)
+        assertEquals("Real Playlist", realItem?.title)
+    }
 }

@@ -69,6 +69,16 @@ class MusicDao(
         }
     }
 
+    suspend fun hasSongs(): Boolean = withContext(ioDispatcher) {
+        database.withConnection(readOnly = true) { conn ->
+            conn.createStatement().use { stmt ->
+                stmt.executeQuery("SELECT 1 FROM songs LIMIT 1").use { rs ->
+                    rs.next()
+                }
+            }
+        }
+    }
+
     suspend fun getSongById(id: String): Song? = withContext(ioDispatcher) {
         database.withConnection(readOnly = true) { conn ->
             val sql = "SELECT * FROM songs WHERE id = ?"

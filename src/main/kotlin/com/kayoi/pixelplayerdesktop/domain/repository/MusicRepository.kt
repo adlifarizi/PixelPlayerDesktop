@@ -25,6 +25,7 @@ import com.kayoi.pixelplayerdesktop.utils.DEFAULT_WORD_DELIMITERS
 interface MusicRepository {
     fun getAllSongsFlow(sortOption: SortOption = SortOption.SongTitleAZ, minDurationMs: Long = 0L): Flow<List<Song>>
     suspend fun getAllSongs(sortOption: SortOption = SortOption.SongTitleAZ, minDurationMs: Long = 0L): List<Song>
+    suspend fun hasSongs(): Boolean
     suspend fun getSongById(id: String): Song?
     suspend fun getSongsByIds(ids: List<String>): List<Song>
     suspend fun getSongByPath(path: String): Song?

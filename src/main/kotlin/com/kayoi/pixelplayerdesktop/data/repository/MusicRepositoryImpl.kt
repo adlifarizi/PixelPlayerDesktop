@@ -62,6 +62,10 @@ class MusicRepositoryImpl(
         return musicDao.getAllSongs(sortOption, minDurationMs)
     }
 
+    override suspend fun hasSongs(): Boolean {
+        return musicDao.hasSongs()
+    }
+
     override suspend fun getSongById(id: String): Song? {
         return musicDao.getSongById(id)
     }
